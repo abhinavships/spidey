@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Live Walkthrough Agent</title>
+<style>
+:root{--bg:#0f1115;--panel:#171a21;--line:#262b36;--ink:#e6e9ef;--dim:#8b93a7;
+--accent:#6ea8fe;--warn:#f0a35e;--stop:#ff6b6b;--ok:#5fd39a}
+*{box-sizing:border-box}
+body{margin:0;font:15px/1.5 -apple-system,Segoe UI,Roboto,sans-serif;
+background:var(--bg);color:var(--ink);height:100vh;display:flex;flex-direction:column}
+header{padding:12px 18px;border-bottom:1px solid var(--line);display:flex;
+align-items:center;gap:14px}
+h1{font-size:15px;margin:0;font-weight:600;letter-spacing:.2px}
+.voice{font-size:13px;color:var(--dim);display:flex;align-items:center;gap:5px}.voice input{width:auto;padding:0}
+#dot{width:9px;height:9px;border-radius:50%;background:var(--stop)}
+#dot.on{background:var(--ok)}
+select,button{background:var(--panel);color:var(--ink);border:1px solid var(--line);
+border-radius:7px;padding:7px 12px;font-size:14px}
+button{cursor:pointer}button:hover{border-color:var(--accent)}
+main{flex:1;display:flex;min-height:0}
+#chat{flex:1;overflow-y:auto;padding:18px;display:flex;flex-direction:column;gap:10px}
+#browser-preview{border:1px solid var(--line);border-radius:14px;background:#0d1119;padding:10px;color:var(--dim);font-size:13px}
+#browser-frame{width:100%;max-height:420px;object-fit:contain;border-radius:10px;margin-top:8px;background:#05070b}
+#side{width:290px;border-left:1px solid var(--line);padding:16px;overflow-y:auto}
+#side h2{font-size:11px;text-transform:uppercase;letter-spacing:1.2px;color:var(--dim);margin:0 0 12px}
+.step{padding:7px 10px;border-radius:6px;font-size:13px;color:var(--dim);
+display:flex;gap:8px;align-items:baseline}
+.step .n{opacity:.5;font-variant-numeric:tabular-nums}
+.step.running{background:#1d2430;color:var(--ink);animation:stepPulse 1.1s ease-in-out infinite}
+@keyframes stepPulse{0%,100%{box-shadow:0 0 0 rgba(110,168,254,0)}50%{box-shadow:0 0 22px rgba(110,168,254,.8);border:1px solid var(--accent)}}
+.step.done{color:var(--ok)}.step.failed{color:var(--stop)}
+.step.blocked{color:var(--warn)}
+.msg{max-width:74ch;padding:11px 14px;border-radius:12px;background:var(--panel);
+border:1px solid var(--line);white-space:pre-wrap}
+.narration{border-color:#33405c}
+.meta{font-size:12px;color:var(--dim);background:none;border:none;padding:2px 4px}
+.heal{border-color:var(--accent);color:var(--accent)}
+.blocked{border-color:var(--stop);background:#2a1618;color:#ffd9d9;font-weight:500}
+.blocked::before{content:"■ refused  ";color:var(--stop);font-weight:700}
+.error{border-color:var(--stop);color:#ffb3b3}
+#teach{display:flex;gap:8px;padding:10px 18px;border-bottom:1px solid var(--line);background:#131722}
+#teach input:first-child{flex:1}#teach input:nth-child(2){width:280px}
+#bar{display:flex;gap:8px;padding:14px 18px;border-top:1px solid var(--line)}
+#msg{flex:1}
+input{background:var(--panel);color:var(--ink);border:1px solid var(--line);
+border-radius:7px;padding:9px 12px;font-size:14px;width:100%}
+</style>
+</head>
+<body>
+<header>
+  <span id="dot"></span>
+  <h1>Live Walkthrough Agent</h1>
+  <label class="voice"><input id="voice" type="checkbox" checked> Voice</label>
+  <select id="wf"></select>
+  <button id="go">Start walkthrough</button>
+  <button id="pause-btn" disabled>Pause</button>
+</header>
+<div id="teach">
+  <input id="teach-text" placeholder="Teach a safe 3–6 step GitHub workflow in plain English…">
+  <input id="teach-url" value="https://github.com/abhinavships/demo-workspace/issues" aria-label="Starting URL">
+  <button id="teach-go">Teach live</button>
+</div>
+<main>
+  <div id="chat"><div id="browser-preview"><div>Live Chrome preview</div><img id="browser-frame" alt="Live browser preview will appear during a run"></div></div>
+  <aside id="side"><h2>Steps</h2><div id="steps"></div></aside>
+</main>
+<div id="bar">
+  <input id="msg" placeholder="Interrupt the agent… (ask a question, say wait/skip/repeat/stop)">
+  <button id="send">Send</button>
+</div>
+<script>
+const chat=document.getElementById('chat'),stepsEl=document.getElementById('steps'),
+      dot=document.getElementById('dot'),wfSel=document.getElementById('wf'),
+      pauseBtn=document.getElementById('pause-btn');
+let ws,steps=[],paused=false;
+
+function setPauseUI(running,isPaused){
+  paused=isPaused;
+  pauseBtn.disabled=!running;
+  pauseBtn.textContent=isPaused?'Resume':'Pause';
+}
+
+function line(text,cls){const d=document.createElement('div');
+  d.className='msg '+(cls||'');d.textContent=text;chat.appendChild(d);
+  chat.scrollTop=chat.scrollHeight;}
+function speak(text){
+  if(!document.getElementById('voice').checked || !('speechSynthesis' in window) || !text)return;
+  window.speechSynthesis.cancel();
+  const utterance=new SpeechSynthesisUtterance(text);
+  utterance.lang='en-US';utterance.rate=1.05;
+  window.speechSynthesis.speak(utterance);
+}
+function narrate(text,audioB64){
+  if(!document.getElementById('voice').checked)return;
+  if(!audioB64){speak(text);return;}
+  const audio=new Audio('data:audio/wav;base64,'+audioB64);
+  audio.play().catch(()=>speak(text));  // autoplay/decode failure falls back to speechSynthesis
+}
+
+function renderSteps(){stepsEl.innerHTML='';steps.forEach((s,i)=>{
+  const d=document.createElement('div');d.className='step '+(s.status||'');
+  d.innerHTML='<span class="n">'+(i+1)+'</span><span>'+s.id+'</span>';
+  stepsEl.appendChild(d);});}
+
+function mark(id,status){const s=steps.find(x=>x.id===id);
+  if(s){s.status=status;renderSteps();}}
+
+async function loadWorkflows(){
+  const rows=await (await fetch('/api/workflows')).json();
+  wfSel.innerHTML=rows.map(r=>`<option value="${r.id}">${r.title} (${r.n_steps} steps)</option>`).join('');
+}
+
+function connect(){
+  const params=new URLSearchParams(location.search);
+  const protocol=location.protocol==='https:'?'wss':'ws';
+  const token=params.get('token')||'';
+  ws=new WebSocket(`${protocol}://${location.host}/ws/s-${Date.now()}?token=${encodeURIComponent(token)}`);
+  ws.onopen=()=>dot.classList.add('on');
+  ws.onclose=()=>{dot.classList.remove('on');setTimeout(connect,1500);};
+  ws.onmessage=e=>{
+    const ev=JSON.parse(e.data);
+    switch(ev.type){
+      case 'run_started': chat.innerHTML='';line('Starting: '+ev.text,'meta');setPauseUI(true,false);break;
+      case 'step_start':
+        if(!steps.find(s=>s.id===ev.step_id)){steps.push({id:ev.step_id});}
+        mark(ev.step_id,'running');break;
+      case 'narration': line(ev.text,'narration');narrate(ev.text,ev.data&&ev.data.audio);break;
+      case 'step_done': mark(ev.step_id,'done');break;
+      case 'step_failed': mark(ev.step_id,'failed');line(ev.text,'error');break;
+      case 'heal': line(ev.text,'heal');break;
+      case 'blocked': mark(ev.step_id,'blocked');line(ev.text,'blocked');break;
+      case 'answer': line(ev.text,'narration');speak(ev.text);break;
+      case 'paused': line(ev.text,'meta');speak(ev.text);setPauseUI(true,true);break;
+      case 'resumed': line(ev.text,'meta');speak(ev.text);setPauseUI(true,false);break;
+      case 'frame': if(ev.data&&ev.data.src){document.getElementById('browser-frame').src=ev.data.src;}break;
+      case 'teach_progress': line(ev.text,'meta');break;
+      case 'teach_question': line(ev.text,'error');break;
+      case 'teach_complete': line(ev.text,'heal');loadWorkflows();break;
+      case 'run_completed': line('Walkthrough complete.','meta');setPauseUI(false,false);break;
+      case 'run_aborted': line('Run stopped.','meta');setPauseUI(false,false);break;
+      case 'error': line(ev.text,'error');break;
+    }
+  };
+}
+
+document.getElementById('go').onclick=()=>{
+  steps=[];renderSteps();
+  ws.send(JSON.stringify({kind:'start_run',workflow_id:wfSel.value}));};
+document.getElementById('teach-go').onclick=()=>{
+  const utterance=document.getElementById('teach-text').value.trim();
+  const site_hint=document.getElementById('teach-url').value.trim();
+  if(!utterance||!site_hint){line('Describe the workflow and provide its starting URL.','error');return;}
+  ws.send(JSON.stringify({kind:'teach_workflow',utterance,site_hint}));
+};
+pauseBtn.onclick=()=>{
+  const action=paused?'resume':'pause';
+  ws.send(JSON.stringify({kind:'pause_control',action}));
+};
+document.getElementById('send').onclick=send;
+document.getElementById('msg').addEventListener('keydown',e=>{if(e.key==='Enter')send();});
+function send(){const i=document.getElementById('msg');if(!i.value.trim())return;
+  line(i.value,'meta');ws.send(JSON.stringify({kind:'user_message',text:i.value}));
+  i.value='';}
+
+loadWorkflows();connect();
+</script>
+</body>
+</html>

@@ -1,0 +1,9 @@
+.env
+.env.local
+wa-profile/
+.venv/
+node_modules/
+*.pyc
+__pycache__/
+.pytest_cache/
+.DS_Store

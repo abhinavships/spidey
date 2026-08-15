@@ -1,0 +1,12 @@
+anthropic
+fastapi
+playwright
+pydantic
+pydantic-settings
+python-dotenv
+PyYAML
+structlog
+uvicorn
+websockets
+pytest
+pytest-asyncio
