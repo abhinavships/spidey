@@ -25,7 +25,6 @@ import structlog
 
 from app.runtime.interrupt import Interrupter
 from app.runtime.qa import QA
-from app.runtime.tts import TTS
 from app.schemas import (
     ActResult,
     BlockedAction,
@@ -76,7 +75,6 @@ class Orchestrator:
         session_id: str = "session",
         interrupter: Any | None = None,
         qa: Any | None = None,
-        tts: Any | None = None,
     ) -> None:
         self.spec = spec
         self.driver = driver
@@ -86,7 +84,6 @@ class Orchestrator:
         self.emit = emit
         self.interrupter = interrupter or Interrupter()
         self.qa = qa or QA()
-        self.tts = tts or TTS()
         self._queue: asyncio.Queue[str] = asyncio.Queue()
         self._state = SessionState(
             session_id=session_id,
@@ -352,12 +349,10 @@ class Orchestrator:
             log.warning("narration_fallback", step_id=step.id, error=str(exc))
             text = step.narration_hint or step.intent
         if text:
-            # TTS is bounded and never raises (app/runtime/tts.py); a slow or
-            # failed call just means no audio, not a stalled or broken step.
-            audio = await self.tts.synthesize(text)
-            data = {"audio": audio} if audio else {}
+            # Voice is intentionally client-side speechSynthesis only; no server
+            # TTS call here, so narration never waits on an audio API.
             await self._emit("narration", text=text, step_id=step.id,
-                             cursor=self._state.cursor, data=data)
+                             cursor=self._state.cursor)
 
     async def _safe_snapshot(self) -> PageSnapshot:
         try:

@@ -230,18 +230,6 @@ class FakeQA:
                       grounded=False, sources=[])
 
 
-class FakeTTS:
-    """TTS that never hits the network. Returns `fixed_audio` (default: none)."""
-
-    def __init__(self, fixed_audio: str | None = None) -> None:
-        self.fixed_audio = fixed_audio
-        self.calls: list[str] = []
-
-    async def synthesize(self, text: str) -> str | None:
-        self.calls.append(text)
-        return self.fixed_audio
-
-
 class FakeInterrupter:
     """Classifier driven by a scripted mapping of substrings to kinds."""
 

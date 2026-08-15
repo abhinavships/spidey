@@ -14,7 +14,7 @@ from app.runtime.narrator import Narrator
 from app.runtime.orchestrator import Orchestrator
 from app.safety.guard import Guard
 from app.schemas import ActionType, Locator, LocatorBundle, RiskLevel, RunState, Step, StepStatus
-from tests.fakes import EventCollector, FakeDriver, FakeResolver, FakeTTS, make_snapshot, make_spec
+from tests.fakes import EventCollector, FakeDriver, FakeResolver, make_snapshot, make_spec
 
 
 def _step(sid: str, intent: str, action=ActionType.CLICK, value=None) -> Step:
@@ -147,31 +147,19 @@ async def test_real_guard_and_narrator_drive_a_clean_run():
     c = EventCollector()
     orch = Orchestrator(spec=spec, driver=FakeDriver([make_snapshot(f"p{i}") for i in range(9)]),
                         resolver=FakeResolver(), narrator=Narrator(llm=None),
-                        guard=Guard(["github.com"]), emit=c.emit, tts=FakeTTS(), session_id="s")
+                        guard=Guard(["github.com"]), emit=c.emit, session_id="s")
     state = await orch.run()
     assert state.state is RunState.COMPLETED
     assert all(r.status is StepStatus.DONE for r in state.records)
     assert len(c.of("narration")) == 4
 
 
-async def test_narration_events_carry_tts_audio_when_available():
+async def test_narration_events_are_text_only_for_browser_native_voice():
     spec = make_spec(2)
     c = EventCollector()
     orch = Orchestrator(spec=spec, driver=FakeDriver([make_snapshot("p")]),
                         resolver=FakeResolver(), narrator=Narrator(llm=None),
-                        guard=Guard(["github.com"]), emit=c.emit,
-                        tts=FakeTTS(fixed_audio="base64-wav"), session_id="s")
-    await orch.run()
-    narrations = c.of("narration")
-    assert narrations and all(e.data.get("audio") == "base64-wav" for e in narrations)
-
-
-async def test_narration_events_have_no_audio_key_when_tts_unavailable():
-    spec = make_spec(2)
-    c = EventCollector()
-    orch = Orchestrator(spec=spec, driver=FakeDriver([make_snapshot("p")]),
-                        resolver=FakeResolver(), narrator=Narrator(llm=None),
-                        guard=Guard(["github.com"]), emit=c.emit, tts=FakeTTS(), session_id="s")
+                        guard=Guard(["github.com"]), emit=c.emit, session_id="s")
     await orch.run()
     narrations = c.of("narration")
     assert narrations and all("audio" not in e.data for e in narrations)
@@ -183,7 +171,7 @@ async def test_real_guard_blocks_and_the_run_continues():
     c = EventCollector()
     orch = Orchestrator(spec=spec, driver=FakeDriver([make_snapshot("p")]),
                         resolver=FakeResolver(), narrator=Narrator(llm=None),
-                        guard=Guard(["github.com"]), emit=c.emit, tts=FakeTTS(), session_id="s")
+                        guard=Guard(["github.com"]), emit=c.emit, session_id="s")
     state = await orch.run()
     assert state.state is RunState.COMPLETED
     assert len(c.of("blocked")) == 1

@@ -14,7 +14,6 @@ from tests.fakes import (
     FakeNarrator,
     FakeQA,
     FakeResolver,
-    FakeTTS,
     make_snapshot,
     make_spec,
 )
@@ -37,7 +36,7 @@ def build(*, interrupter=None, qa=None):
     collector = EventCollector()
     orch = Orchestrator(
         make_spec(5), driver, FakeResolver(), FakeNarrator(), FakeGuard(), collector.emit,
-        interrupter=interrupter, qa=qa, tts=FakeTTS(), session_id="demo2",
+        interrupter=interrupter, qa=qa, session_id="demo2",
     )
     return orch, driver, collector
 
@@ -79,8 +78,7 @@ async def test_question_arriving_during_an_action_resumes_the_same_step():
     driver = InterruptingDriver([make_snapshot("thing 0")])
     collector = EventCollector()
     orch = Orchestrator(make_spec(2), driver, FakeResolver(), FakeNarrator(), FakeGuard(), collector.emit,
-                        interrupter=ScriptedInterrupter([decision(InterruptKind.QUESTION)]), qa=FakeQA(),
-                        tts=FakeTTS())
+                        interrupter=ScriptedInterrupter([decision(InterruptKind.QUESTION)]), qa=FakeQA())
     driver.orch = orch
     await orch.run()
 
@@ -154,8 +152,7 @@ async def test_pause_during_action_finishes_current_step_then_waits_for_resume()
     driver = InterruptingDriver([make_snapshot("thing 0"), make_snapshot("thing 1")])
     collector = EventCollector()
     orch = Orchestrator(make_spec(2), driver, FakeResolver(), FakeNarrator(), FakeGuard(), collector.emit,
-                        interrupter=ScriptedInterrupter([decision(InterruptKind.PAUSE)]), qa=FakeQA(),
-                        tts=FakeTTS())
+                        interrupter=ScriptedInterrupter([decision(InterruptKind.PAUSE)]), qa=FakeQA())
     driver.orch = orch
     state = await orch.run()
 

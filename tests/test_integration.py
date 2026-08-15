@@ -19,7 +19,6 @@ from tests.fakes import (
     FakeGuard,
     FakeNarrator,
     FakeResolver,
-    FakeTTS,
     make_snapshot,
     make_spec,
 )
@@ -36,7 +35,6 @@ def build(spec=None, driver=None, guard=None):
         narrator=FakeNarrator(),
         guard=guard or FakeGuard(),
         emit=collector.emit,
-        tts=FakeTTS(),
         session_id="test-session",
     )
     return orch, driver, collector

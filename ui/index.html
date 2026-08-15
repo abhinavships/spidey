@@ -88,14 +88,8 @@ function speak(text){
   if(!document.getElementById('voice').checked || !('speechSynthesis' in window) || !text)return;
   window.speechSynthesis.cancel();
   const utterance=new SpeechSynthesisUtterance(text);
-  utterance.lang='en-US';utterance.rate=1.05;
+  utterance.lang='en-US';utterance.rate=1.0;utterance.pitch=1.05;
   window.speechSynthesis.speak(utterance);
-}
-function narrate(text,audioB64){
-  if(!document.getElementById('voice').checked)return;
-  if(!audioB64){speak(text);return;}
-  const audio=new Audio('data:audio/wav;base64,'+audioB64);
-  audio.play().catch(()=>speak(text));  // autoplay/decode failure falls back to speechSynthesis
 }
 
 function renderSteps(){stepsEl.innerHTML='';steps.forEach((s,i)=>{
@@ -125,7 +119,7 @@ function connect(){
       case 'step_start':
         if(!steps.find(s=>s.id===ev.step_id)){steps.push({id:ev.step_id});}
         mark(ev.step_id,'running');break;
-      case 'narration': line(ev.text,'narration');narrate(ev.text,ev.data&&ev.data.audio);break;
+      case 'narration': line(ev.text,'narration');speak(ev.text);break;
       case 'step_done': mark(ev.step_id,'done');break;
       case 'step_failed': mark(ev.step_id,'failed');line(ev.text,'error');break;
       case 'heal': line(ev.text,'heal');break;
