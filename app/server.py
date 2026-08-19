@@ -24,6 +24,7 @@ from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from app.browser.driver import Driver
+from app.drone import router as drone_router
 from app.browser.resolver import Resolver
 from app.runtime.narrator import Narrator
 from app.teach.compiler import compile_workflow
@@ -37,11 +38,23 @@ log = structlog.get_logger(__name__)
 
 UI_DIR = Path(__file__).resolve().parent.parent / "ui"
 CDP_ENDPOINT = os.getenv("WA_CDP", "http://localhost:9222")
+# Headless is the default: nothing opens on the desktop and the run is watched
+# through the in-app preview. Set WA_CDP_ATTACH=1 to drive a real Chrome instead
+# (needed only when a workflow depends on a browser profile you logged into).
+ATTACH_TO_CHROME = os.getenv("WA_CDP_ATTACH", "0") == "1"
+CDP = CDP_ENDPOINT if ATTACH_TO_CHROME else None
 FRAME_INTERVAL_S = float(os.getenv("WA_FRAME_INTERVAL_S", "1.0"))
+# How long teaching waits for a human to answer a clarifying question.
+TEACH_ANSWER_TIMEOUT_S = float(os.getenv("WA_TEACH_ANSWER_TIMEOUT", "180"))
+# How many rounds of clarification the compiler gets before teaching gives up.
+MAX_COMPILE_ROUNDS = 3
 
 app = FastAPI(title="Live Walkthrough Agent")
 if UI_DIR.exists():
     app.mount("/static", StaticFiles(directory=UI_DIR), name="static")
+    app.mount("/drone-static", StaticFiles(directory=UI_DIR / "drone"), name="drone-static")
+# The site the agent drives: SkyLoop, served from this same process.
+app.include_router(drone_router)
 
 
 def _now() -> datetime:
@@ -58,6 +71,18 @@ def build_orchestrator(spec: WorkflowSpec, session_id: str, emit, driver: Driver
         spec=spec, driver=driver, resolver=Resolver(), narrator=Narrator(),
         guard=Guard([spec.target_domain]), emit=emit, session_id=session_id,
     )
+
+
+@app.get("/api/workflows/{workflow_id}")
+async def api_workflow(workflow_id: str):
+    """One workflow's steps, so the UI can show the plan before the run starts."""
+    try:
+        spec = await load_workflow(workflow_id)
+    except WorkflowNotFound:
+        return JSONResponse({"error": "no such workflow"}, status_code=404)
+    return {"id": spec.id, "title": spec.title, "entry_url": spec.entry_url,
+            "steps": [{"id": step.id, "intent": step.intent, "action": step.action.value,
+                       "risk": step.risk.value} for step in spec.steps]}
 
 
 @app.get("/")
@@ -111,6 +136,8 @@ async def ws(sock: WebSocket, session_id: str) -> None:
     driver: Driver | None = None
     orch: Orchestrator | None = None
     task: asyncio.Task | None = None
+    # Set while teaching is blocked on a question; the next chat message answers it.
+    pending: asyncio.Future[str] | None = None
 
     async def run(workflow_id: str) -> None:
         nonlocal driver, orch
@@ -121,7 +148,7 @@ async def ws(sock: WebSocket, session_id: str) -> None:
             return
         driver = Driver()
         try:
-            await driver.start(spec.entry_url, cdp_endpoint=CDP_ENDPOINT)
+            await driver.start(spec.entry_url, cdp_endpoint=CDP)
         except RuntimeError as exc:
             await error(str(exc))
             driver = None
@@ -145,23 +172,46 @@ async def ws(sock: WebSocket, session_id: str) -> None:
                 await driver.stop()
                 driver = None
 
+    async def ask(question: str) -> str | None:
+        """Put one teaching question to the human and wait for their chat reply."""
+        nonlocal pending
+        await emit(Event(type="teach_question", session_id=session_id, ts=_now(), text=question))
+        pending = asyncio.get_running_loop().create_future()
+        try:
+            return await asyncio.wait_for(pending, TEACH_ANSWER_TIMEOUT_S)
+        except (asyncio.TimeoutError, asyncio.CancelledError):
+            return None
+        finally:
+            pending = None
+
     async def teach(utterance: str, site_hint: str) -> None:
         """Compile and rehearse a reversible workflow in the attached live Chrome."""
-        try:
-            draft = await compile_workflow(utterance, site_hint)
-        except CompileError as exc:
-            await error(f"Teaching needs clarification: {exc}")
-            return
-        if draft.ambiguities:
-            await emit(Event(type="teach_question", session_id=session_id, ts=_now(),
-                             text="Teaching needs clarification: " + " ".join(draft.ambiguities)))
+        draft = None
+        for _ in range(MAX_COMPILE_ROUNDS):
+            try:
+                draft = await compile_workflow(utterance, site_hint)
+            except CompileError as exc:
+                await error(f"Teaching needs clarification: {exc}")
+                return
+            if not draft.ambiguities:
+                break
+            reply = await ask("Teaching needs clarification: " + " ".join(draft.ambiguities))
+            if not reply or not reply.strip():
+                await error("Teaching stopped: that question went unanswered.")
+                return
+            # Keep the original wording; the answer is added, never substituted,
+            # so a clarification cannot silently drop half the request.
+            utterance = f"{utterance}\n\nClarification: {reply.strip()}"
+        if draft is None or draft.ambiguities:
+            await error("Teaching stopped: the description is still ambiguous after clarifying.")
             return
         teach_driver = Driver()
         frame_task: asyncio.Task | None = None
         try:
-            await teach_driver.start(draft.entry_url, cdp_endpoint=CDP_ENDPOINT)
+            await teach_driver.start(draft.entry_url, cdp_endpoint=CDP)
             frame_task = asyncio.create_task(stream_frames(teach_driver))
-            spec = await rehearse(draft, teach_driver, Resolver(), Guard([draft.target_domain]), emit)
+            spec = await rehearse(draft, teach_driver, Resolver(), Guard([draft.target_domain]),
+                                  emit, ask)
             if not spec.rehearsal_passed:
                 return
             spec = spec.model_copy(update={"source_utterance": utterance})
@@ -199,7 +249,9 @@ async def ws(sock: WebSocket, session_id: str) -> None:
                     continue
                 task = asyncio.create_task(teach(msg.get("utterance", ""), msg.get("site_hint", "")))
             elif kind == "user_message":
-                if orch is None:
+                if pending is not None and not pending.done():
+                    pending.set_result(msg.get("text", ""))
+                elif orch is None:
                     await error("nothing is running yet")
                 else:
                     orch.submit_user_message(msg.get("text", ""))

@@ -1,127 +1,230 @@
-# Instructions — how to use the Live Walkthrough Agent
+# Instructions — running the Live Walkthrough Agent
 
-For what this project is and how it's structured, see [README.md](README.md).
-This document is the practical "how do I actually run and use it" guide.
+What this project is and how it's put together lives in [README.md](README.md).
+This is the practical "get it running on my machine" guide.
+
+---
 
 ## 1. One-time setup
 
-```bash
-cd ~/walkthrough-agent
-source .venv/bin/activate
-pip install -r requirements.txt      # already installed if .venv exists
-```
+### Python
 
-Copy `.env.example` to `.env` and fill in at least one LLM provider key
-(Groq, Gemini, or Anthropic — checked in that priority order by
-`app/llm.py`). Every variable is documented inline in `.env.example`.
-
-If you're pointing this at a real GitHub repo for the shipped `gh-issue`
-workflow, open `workflows/gh-issue.v1.json` and replace the repo URL in
-`entry_url` and the `open-repo` step's `value` with your own
-`username/reponame`.
-
-## 2. Start the two things this app needs
-
-**A real, visible Chrome window** that the agent drives (separate from
-whatever browser you're reading this in):
+Needs **3.11+**. macOS ships 3.9, so create the venv against a newer interpreter:
 
 ```bash
-./launch_browser.sh
+uv venv --python 3.12 .venv
+uv pip install --python .venv/bin/python -r requirements.txt
 ```
 
-This opens Chrome with its DevTools debug port open on `9222`, navigated to
-github.com. Log into GitHub in that window if asked, and leave it open —
-the agent drives this exact window, not a hidden one.
-
-**The app server:**
+Without `uv`:
 
 ```bash
-uvicorn app.server:app --port 8000
+python3.12 -m venv .venv
+.venv/bin/pip install -r requirements.txt
 ```
 
-## 3. Open the UI
+### The browser
+
+The agent drives a headless Chromium managed by Playwright. Download it once:
+
+```bash
+.venv/bin/python -m playwright install chromium
+```
+
+### The model
+
+```bash
+ollama pull llama3.2:3b
+```
+
+2 GB, already quantized (Q4_K_M). It handles narration, interrupt classification,
+grounded answers and workflow teaching. A bigger model is not required — every
+structured call is grammar-constrained to its JSON schema, so a small model
+cannot return a malformed reply.
+
+Make sure Ollama is serving:
+
+```bash
+curl -s http://localhost:11434/api/tags | head -c 80
+```
+
+### Configuration
+
+```bash
+cp .env.example .env
+```
+
+Then set one line:
 
 ```
-http://localhost:8000/?token=<WA_DEMO_TOKEN from your .env>
+WA_LOCAL_MODEL=llama3.2:3b
 ```
 
-If `WA_DEMO_TOKEN` is empty/unset in your `.env`, the token check is
-disabled and you can drop the `?token=` entirely.
+Every variable is documented inline in `.env.example`. If you'd rather use a
+hosted provider, set `GROQ_API_KEY`, `GEMINI_API_KEY` or `ANTHROPIC_API_KEY`
+instead and leave `WA_LOCAL_MODEL` empty.
 
-Put this window and the Chrome window where you can see both at once —
-the UI narrates and tracks progress, the Chrome window is where the actual
-clicking happens.
+### Check it
+
+```bash
+.venv/bin/python -m pytest
+```
+
+Expect **98 passed**. If not, stop and fix that first — nothing downstream works otherwise.
+
+---
+
+## 2. Start it
+
+One process serves everything — the agent UI, the WebSocket, and the SkyLoop
+site being driven:
+
+```bash
+.venv/bin/python -m uvicorn app.server:app --port 8000
+```
+
+Open **http://localhost:8000**.
+
+If you set `WA_DEMO_TOKEN` in `.env`, open
+`http://localhost:8000/?token=<that value>` instead. Leave it unset and the
+check is disabled.
+
+**No browser window will appear.** That's correct — the agent drives a headless
+Chromium and you watch it in the preview panel. To see a real window instead,
+set `WA_HEADLESS=0`.
+
+---
+
+## 3. Look at the site it drives
+
+Worth opening once yourself so you know what the agent is doing:
+**http://localhost:8000/drone**
+
+| Sign in as | Password | Lands on |
+|---|---|---|
+| `vp@skyloop.io` | `flightdemo` | Fleet readiness — KPI tiles, quarter selector, report generator |
+| `tech@skyloop.io` | `flightdemo` | Mission planner — flight parameters, preflight checklist |
+| `mkt@skyloop.io` | `flightdemo` | Course campaigns — audience, channels, schedule |
+
+Each role is locked out of the other two workspaces; try it and you'll be
+redirected back to your own.
+
+The store is in memory. Restarting the server resets missions and campaigns to
+their seeded state, which is what you want between rehearsals.
+
+---
 
 ## 4. Run a workflow
 
-1. Pick a workflow from the dropdown (workflows on disk are listed via
-   `GET /api/workflows`; `gh-issue` ships by default).
-2. Click **Start walkthrough**. The agent drives Chrome step by step,
-   narrating each one in the left pane (spoken aloud too, if the **Voice**
-   checkbox is on) and tracking progress in the right-hand step list.
+1. Pick one from the dropdown. Three ship:
+   - **Plan and preflight a survey mission** (16 steps, technical)
+   - **Pull the quarterly readiness report** (8 steps, VP)
+   - **Draft a course intake campaign** (12 steps, marketing)
+2. Press **Start**.
+3. Watch the preview panel and the plan rail. Narration streams into the chat
+   and is spoken aloud if **Voice** is ticked — pick the voice from the dropdown
+   beside it.
 
-## 5. Interrupt it while it's running
+Each step pauses for `WA_STEP_PACE_S` seconds (default 1.25) before acting, so a
+human can follow along. Raise it if you're presenting.
 
-Type into the chat box at the bottom at any time. Your message is
-classified and handled without losing the run's place:
+---
 
-| You type something like | What happens |
+## 5. Interrupt it mid-run
+
+Type into the chat box at any point:
+
+| You type | What happens |
 |---|---|
-| "what does that button do?" | Answered from what the agent has actually seen (grounded — it won't guess), then resumes where it was. |
-| "skip this part" | Marks the current step skipped, moves on. |
-| "jump to the label step" | Skips ahead to a matching step (only if it maps to a real step in this workflow). |
+| "what does that button do?" | Answered from what it has actually seen, then resumes where it was. |
+| "why is fleet readiness only 60%?" | Same — grounded in the page it's looking at. |
+| "what's your pricing?" | Declines: it wasn't shown that. **This is a designed outcome, not a failure.** |
+| "skip this part" | Marks the step skipped and moves on. |
+| "jump to the part where it saves" | Skips ahead, if that maps to a real step. |
 | "do that again" | Repeats the current step. |
-| "wait" / "hold on" / "pause" | Pauses **after** the current step finishes (never mid-action) and asks whether to resume. Reply "yes"/"resume" to continue, "no"/"stop" to end. |
-| "stop" | Ends the run immediately. |
+| "wait" / "hold on" | Pauses after the current step finishes, then asks whether to resume. |
+| "stop" | Ends the run. |
 
-There's also a **Pause** button in the header — same pause-after-current
-behavior, but deterministic (it doesn't go through the LLM classifier at
-all, so it works even if the model is slow or unavailable). Click it again
-(now labeled **Resume**) to continue.
+There's also a **Pause** button in the header. Same pause-after-current
+behaviour, but deterministic — it never goes through the model, so it works even
+if the model is slow or down.
 
-## 6. Safety refusals
+Questions never move the cursor. Ask three in a row and the run still resumes at
+the right step.
 
-Before any click/type/select actually touches the page, `Guard`
-(`app/safety/guard.py`) checks it. It refuses and narrates the refusal in
-red, then continues the run, if the step:
+---
 
-- Navigates off the workflow's allowed domain.
-- Is explicitly marked `"risk": "destructive"` in the workflow file.
-- Matches a hard-coded irreversible phrase in its own intent text — things
-  like "delete", "delete repository", "transfer ownership", "empty trash",
-  "confirm payment", "unsubscribe all".
+## 6. Teach it a new workflow
 
-This is not something you configure per run — it's a property of the
-workflow file and the Guard's phrase list. To see it fire, edit a step's
-`intent` in the workflow JSON to include one of those phrases and rerun.
+1. Press **Teach**.
+2. Describe the workflow in one or two sentences, e.g.
+   *"Sign in as mkt@skyloop.io with password flightdemo, then draft a campaign
+   for the thermal course."*
+3. Leave the starting URL as `http://localhost:8000/drone/login`.
+4. Press **Teach it live**.
 
-## 7. Teach a new workflow
+It compiles a draft, then rehearses it step by step in the browser. When a step
+won't resolve, it asks you in the chat. **Just answer in the chat box** — your
+reply becomes that step's new description and it tries again.
 
-Use the bar above the chat: describe a short (3–6 step) workflow in plain
-English plus the URL it starts from, and click **Teach live**. The agent
-compiles a draft, then actually rehearses it once against the live Chrome
-window (this really clicks around) to resolve real locators and capture
-page knowledge. If any step doesn't resolve, it asks a clarifying question
-instead of saving a broken workflow. A successful rehearsal is saved to
-`WA_WORKFLOWS_DIR` (default `workflows/`) and immediately appears in the
-workflow dropdown.
+Useful answers:
 
-Only short, reversible workflows are accepted — anything that reads as
-destructive (delete/buy/publish/merge/etc.) is rejected before rehearsal
-ever starts, and a "submit" step is only allowed if your description
-explicitly says this is a dummy/test repo.
+| Situation | Answer with |
+|---|---|
+| It can't find a field | Name it as it appears — *"the Work email field"* |
+| It can't find a button | *"the Save campaign draft button"* |
+| The step isn't needed — you're already there | *"skip that, we're already there"* |
+
+Each step gets two retries before teaching gives up on it. Everything learned up
+to that point is kept.
+
+On success the workflow is written to `workflows/<name>.v1.json` and appears in
+the dropdown immediately. Run it like any other.
+
+> **Teaching is non-deterministic.** A small model plans a slightly different set
+> of steps each time, and typically asks about two or three of them. If you're
+> demoing this, teach the workflow once beforehand so a working one is already on
+> disk, then teach a second one live.
+
+---
+
+## 7. Driving your real Chrome instead
+
+Only needed for a workflow against a site where you're already logged in with a
+profile — the headless browser has no session of yours.
+
+```bash
+./launch_browser.sh                       # Chrome with CDP open on port 9222
+WA_CDP_ATTACH=1 .venv/bin/python -m uvicorn app.server:app --port 8000
+```
+
+Log in inside that Chrome window and leave it open. The agent drives that exact
+window.
+
+> Only one session may drive a browser at a time. Opening the UI in two tabs and
+> starting a run in each will make them fight over the same page, and one will
+> close it out from under the other.
+
+---
 
 ## Troubleshooting
 
-| Symptom | Fix |
-|---|---|
-| "Could not attach to Chrome on..." | `./launch_browser.sh` isn't running, or you closed that window. Check `curl http://localhost:9222/json` — an empty `[]` means the process is alive but has no open tab; kill it and relaunch. |
-| Nothing in the workflow dropdown | You're not running `uvicorn` from the repo root — `workflows/` is resolved relative to the current working directory. |
-| Every question gets a canned "out of scope" answer | No working LLM key, or the configured model/key has hit a quota or rate limit. Check `/tmp` server logs for `llm_call_failed` / `*_gave_up` warnings. |
-| Narration sounds flat / templated | Same cause as above — no reachable LLM, so narration falls back to a local, page-grounded template. Still varies per page, just plainer. |
-| WebSocket closes immediately with "invalid demo token" | Your URL's `?token=` doesn't match `WA_DEMO_TOKEN` in `.env` (or you dropped it while a token is still configured). |
-| It logs you out of GitHub / hits 2FA | The Chrome profile at `~/wa-profile` got reset. Log in again in the launched window. |
+| Symptom | Cause | Fix |
+|---|---|---|
+| `openai_call_failed ... timed out` | Model cold-loading, or too large | First call after a while is slow; raise `WA_LOCAL_TIMEOUT`, or use a smaller model |
+| Narration is generic, not about the page | Model call exceeded `WA_LLM_TIMEOUT` and fell back to the template | Raise it, or use a faster model |
+| Answers always "I wasn't shown that" | Nothing retrieved matched the question | Expected for off-topic questions. Otherwise raise `WA_EVIDENCE_CHUNKS` |
+| `Could not attach to Chrome on ...` | `WA_CDP_ATTACH=1` with no Chrome on 9222 | Run `./launch_browser.sh`, or unset it and use headless |
+| Teaching: *"the draft did not stay on the requested website"* | Model drifted to another host | Re-word the description; keep the URL in it |
+| Teaching: *"navigates somewhere but gives no address"* | A mid-workflow step wanted a page it didn't name | Name the page in your description, or teach it as a click |
+| Tests fail after editing `.env` | — | They shouldn't: `tests/conftest.py` clears provider variables. If they do, that's a real bug |
+| A run repeats one step forever | Step numbering has a gap | Shouldn't happen — `WorkflowSpec` rejects it at load. File it if you see it |
 
-For the condensed, demo-recording-specific checklist (including the
-"record the safety refusal on camera" step), see
-[QUICKSTART.md](QUICKSTART.md).
+---
+
+## Recording a demo
+
+1. Restart the server first — resets SkyLoop to its seeded state.
+2. Teach the workflow you'll teach live, once, in advance. Keep it.
+3. Raise `WA_STEP_PACE_S` to ~2.0 so steps are followable on video.
+4. Record each run as it lands. Never rely on live-only.

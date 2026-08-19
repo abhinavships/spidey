@@ -1,163 +1,286 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<title>Live Walkthrough Agent</title>
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SkyLoop Walkthrough Agent</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><text y='14' font-size='14'>🚁</text></svg>">
 <style>
-:root{--bg:#0f1115;--panel:#171a21;--line:#262b36;--ink:#e6e9ef;--dim:#8b93a7;
---accent:#6ea8fe;--warn:#f0a35e;--stop:#ff6b6b;--ok:#5fd39a}
+:root{
+  --bg:#0b1220; --panel:#111c30; --panel-2:#16243c; --line:#22344f;
+  --ink:#e8eef8; --dim:#8fa3bf; --accent:#38bdf8; --accent-2:#22d3ee;
+  --ok:#34d399; --warn:#fbbf24; --bad:#f87171; --violet:#a78bfa;
+}
 *{box-sizing:border-box}
-body{margin:0;font:15px/1.5 -apple-system,Segoe UI,Roboto,sans-serif;
-background:var(--bg);color:var(--ink);height:100vh;display:flex;flex-direction:column}
-header{padding:12px 18px;border-bottom:1px solid var(--line);display:flex;
-align-items:center;gap:14px}
-h1{font-size:15px;margin:0;font-weight:600;letter-spacing:.2px}
-.voice{font-size:13px;color:var(--dim);display:flex;align-items:center;gap:5px}.voice input{width:auto;padding:0}
-#dot{width:9px;height:9px;border-radius:50%;background:var(--stop)}
-#dot.on{background:var(--ok)}
-select,button{background:var(--panel);color:var(--ink);border:1px solid var(--line);
-border-radius:7px;padding:7px 12px;font-size:14px}
-button{cursor:pointer}button:hover{border-color:var(--accent)}
-main{flex:1;display:flex;min-height:0}
-#chat{flex:1;overflow-y:auto;padding:18px;display:flex;flex-direction:column;gap:10px}
-#browser-preview{border:1px solid var(--line);border-radius:14px;background:#0d1119;padding:10px;color:var(--dim);font-size:13px}
-#browser-frame{width:100%;max-height:420px;object-fit:contain;border-radius:10px;margin-top:8px;background:#05070b}
-#side{width:290px;border-left:1px solid var(--line);padding:16px;overflow-y:auto}
-#side h2{font-size:11px;text-transform:uppercase;letter-spacing:1.2px;color:var(--dim);margin:0 0 12px}
-.step{padding:7px 10px;border-radius:6px;font-size:13px;color:var(--dim);
-display:flex;gap:8px;align-items:baseline}
-.step .n{opacity:.5;font-variant-numeric:tabular-nums}
-.step.running{background:#1d2430;color:var(--ink);animation:stepPulse 1.1s ease-in-out infinite}
-@keyframes stepPulse{0%,100%{box-shadow:0 0 0 rgba(110,168,254,0)}50%{box-shadow:0 0 22px rgba(110,168,254,.8);border:1px solid var(--accent)}}
-.step.done{color:var(--ok)}.step.failed{color:var(--stop)}
-.step.blocked{color:var(--warn)}
-.msg{max-width:74ch;padding:11px 14px;border-radius:12px;background:var(--panel);
-border:1px solid var(--line);white-space:pre-wrap}
-.narration{border-color:#33405c}
-.meta{font-size:12px;color:var(--dim);background:none;border:none;padding:2px 4px}
-.heal{border-color:var(--accent);color:var(--accent)}
-.blocked{border-color:var(--stop);background:#2a1618;color:#ffd9d9;font-weight:500}
-.blocked::before{content:"■ refused  ";color:var(--stop);font-weight:700}
-.error{border-color:var(--stop);color:#ffb3b3}
-#teach{display:flex;gap:8px;padding:10px 18px;border-bottom:1px solid var(--line);background:#131722}
-#teach input:first-child{flex:1}#teach input:nth-child(2){width:280px}
-#bar{display:flex;gap:8px;padding:14px 18px;border-top:1px solid var(--line)}
-#msg{flex:1}
-input{background:var(--panel);color:var(--ink);border:1px solid var(--line);
-border-radius:7px;padding:9px 12px;font-size:14px;width:100%}
-</style>
-</head>
-<body>
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font:15px/1.55 ui-sans-serif,-apple-system,"Segoe UI",Roboto,sans-serif;
+  display:flex;flex-direction:column;overflow:hidden}
+button{font:inherit;font-weight:600;padding:8px 14px;border-radius:8px;border:1px solid transparent;
+  background:var(--accent);color:#04121f;cursor:pointer;display:inline-flex;align-items:center;gap:7px}
+button:hover:not(:disabled){filter:brightness(1.09)}
+button:disabled{opacity:.4;cursor:not-allowed}
+button.ghost{background:transparent;border-color:var(--line);color:var(--ink)}
+button svg{width:15px;height:15px;flex:none}
+select,input{font:inherit;padding:8px 11px;background:var(--panel-2);color:var(--ink);
+  border:1px solid var(--line);border-radius:8px}
+select:focus,input:focus{outline:2px solid var(--accent);outline-offset:-1px}
+
+header{display:flex;align-items:center;gap:12px;padding:11px 18px;background:var(--panel);
+  border-bottom:1px solid var(--line);flex:none;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:9px;font-weight:650}
+.brand svg{width:21px;height:21px}
+.brand small{display:block;font-weight:400;font-size:11px;color:var(--dim);letter-spacing:.4px;text-transform:uppercase}
+.spacer{flex:1}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--bad);flex:none}
+.dot.on{background:var(--ok);box-shadow:0 0 8px var(--ok)}
+.toggle{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--dim)}
+.toggle input{accent-color:var(--accent)}
+
+main{flex:1;display:grid;grid-template-columns:minmax(340px,420px) 1fr;min-height:0}
+section.chat{display:flex;flex-direction:column;min-height:0;border-right:1px solid var(--line)}
+#log{flex:1;overflow-y:auto;padding:18px;display:flex;flex-direction:column;gap:12px}
+.bubble{max-width:92%;padding:10px 13px;border-radius:13px;font-size:14px;white-space:pre-wrap;
+  animation:rise .18s ease-out}
+@keyframes rise{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
+.bubble.agent{background:var(--panel);border:1px solid var(--line);border-bottom-left-radius:4px;align-self:flex-start}
+.bubble.you{background:var(--accent);color:#04121f;border-bottom-right-radius:4px;align-self:flex-end;font-weight:500}
+.bubble.meta{align-self:center;background:transparent;color:var(--dim);font-size:12.5px;
+  text-align:center;padding:2px;max-width:100%}
+.bubble.alert{background:rgba(248,113,113,.12);border:1px solid rgba(248,113,113,.35);color:#fecaca;align-self:flex-start}
+.bubble.guard{background:rgba(251,191,36,.12);border:1px solid rgba(251,191,36,.35);color:#fde68a;align-self:flex-start}
+.bubble.heal{background:rgba(167,139,250,.12);border:1px solid rgba(167,139,250,.35);color:#ddd6fe;align-self:flex-start}
+.bubble .who{display:flex;align-items:center;gap:6px;font-size:11px;letter-spacing:.5px;
+  text-transform:uppercase;color:var(--dim);margin-bottom:5px}
+.bubble .who svg{width:13px;height:13px}
+.composer{flex:none;display:flex;gap:9px;padding:13px;border-top:1px solid var(--line);background:var(--panel)}
+.composer input{flex:1}
+
+section.stage{display:flex;flex-direction:column;min-height:0;background:#070d18}
+.viewport{flex:1;margin:16px 16px 0;border:1px solid var(--line);border-radius:12px;overflow:hidden;
+  background:var(--panel);display:grid;place-items:center;position:relative;min-height:0}
+.viewport img{width:100%;height:100%;object-fit:contain;display:none}
+.viewport.live img{display:block}
+.viewport .idle{color:var(--dim);text-align:center;padding:26px;font-size:14px}
+.viewport .idle svg{width:38px;height:38px;opacity:.5;margin-bottom:10px}
+.viewport.live .idle{display:none}
+.livetag[hidden]{display:none}
+.livetag{position:absolute;top:11px;left:11px;display:flex;align-items:center;gap:6px;
+  background:rgba(7,13,24,.82);border:1px solid var(--line);border-radius:999px;
+  padding:4px 11px;font-size:11.5px;letter-spacing:.6px;color:var(--dim);text-transform:uppercase}
+.livetag i{width:7px;height:7px;border-radius:50%;background:var(--bad);animation:pulse 1.4s infinite}
+@keyframes pulse{50%{opacity:.25}}
+.rail{flex:none;max-height:31%;overflow-y:auto;padding:14px 16px 16px;display:flex;flex-direction:column;gap:6px}
+.rail h2{font-size:11px;letter-spacing:.6px;text-transform:uppercase;color:var(--dim);margin:2px 0 4px}
+.step{display:flex;align-items:center;gap:10px;padding:7px 10px;border-radius:8px;font-size:13.5px;
+  border:1px solid transparent;color:var(--dim)}
+.step .n{width:21px;height:21px;border-radius:50%;flex:none;display:grid;place-items:center;
+  font-size:11px;font-weight:700;background:var(--panel-2);color:var(--dim)}
+.step.running{background:var(--panel);border-color:var(--accent);color:var(--ink)}
+.step.running .n{background:var(--accent);color:#04121f}
+.step.done{color:var(--ink)}
+.step.done .n{background:rgba(52,211,153,.2);color:var(--ok)}
+.step.failed .n{background:rgba(248,113,113,.2);color:var(--bad)}
+.step.skipped{opacity:.5;text-decoration:line-through}
+.step.blocked .n{background:rgba(251,191,36,.2);color:var(--warn)}
+
+.teach{display:none;gap:9px;padding:12px 18px;background:var(--panel-2);
+  border-bottom:1px solid var(--line);flex:none;flex-wrap:wrap}
+.teach.open{display:flex}
+.teach input{flex:1;min-width:220px}
+@media (max-width:900px){main{grid-template-columns:1fr;grid-template-rows:1fr 1fr}
+  section.chat{border-right:none;border-bottom:1px solid var(--line)}}
+</style></head><body>
+
 <header>
-  <span id="dot"></span>
-  <h1>Live Walkthrough Agent</h1>
-  <label class="voice"><input id="voice" type="checkbox" checked> Voice</label>
-  <select id="wf"></select>
-  <button id="go">Start walkthrough</button>
-  <button id="pause-btn" disabled>Pause</button>
+  <span class="brand">
+    <svg viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="1.7" stroke-linecap="round">
+      <circle cx="5" cy="5" r="3"/><circle cx="19" cy="5" r="3"/><circle cx="5" cy="19" r="3"/><circle cx="19" cy="19" r="3"/>
+      <path d="M7.2 7.2 10 10m4 4 2.8 2.8M16.8 7.2 14 10m-4 4-2.8 2.8"/><rect x="9.5" y="9.5" width="5" height="5" rx="1.3"/></svg>
+    <span>Walkthrough Agent<small>SkyLoop Flight Academy</small></span>
+  </span>
+  <select id="wf" aria-label="Workflow"></select>
+  <button id="go"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>Start</button>
+  <button id="pause" class="ghost" disabled><svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 4h4v16H6zM14 4h4v16h-4z"/></svg>Pause</button>
+  <button id="teach-toggle" class="ghost"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 3 2 8l10 5 10-5-10-5z"/><path d="M6 10.5V16c0 1.7 2.7 3 6 3s6-1.3 6-3v-5.5"/></svg>Teach</button>
+  <span class="spacer"></span>
+  <label class="toggle"><input id="voice" type="checkbox" checked> Voice</label>
+  <select id="voice-pick" aria-label="Narration voice" style="max-width:170px"></select>
+  <span class="dot" id="dot" title="connection"></span>
 </header>
-<div id="teach">
-  <input id="teach-text" placeholder="Teach a safe 3–6 step GitHub workflow in plain English…">
-  <input id="teach-url" value="https://github.com/abhinavships/demo-workspace/issues" aria-label="Starting URL">
-  <button id="teach-go">Teach live</button>
+
+<div class="teach" id="teach">
+  <input id="teach-text" placeholder="Teach a workflow in plain English — e.g. sign in as marketing and draft a campaign for the thermal course">
+  <input id="teach-url" value="http://localhost:8000/drone/login" aria-label="Starting URL" style="max-width:290px">
+  <button id="teach-go">Teach it live</button>
 </div>
+
 <main>
-  <div id="chat"><div id="browser-preview"><div>Live Chrome preview</div><img id="browser-frame" alt="Live browser preview will appear during a run"></div></div>
-  <aside id="side"><h2>Steps</h2><div id="steps"></div></aside>
+  <section class="chat">
+    <div id="log"></div>
+    <div class="composer">
+      <input id="msg" placeholder="Interrupt: ask a question, or say skip / repeat / wait / stop">
+      <button id="send"><svg viewBox="0 0 24 24" fill="currentColor"><path d="m3 20 18-8L3 4l4 8-4 8z"/></svg>Send</button>
+    </div>
+  </section>
+
+  <section class="stage">
+    <div class="viewport" id="viewport">
+      <span class="livetag" id="livetag" hidden><i></i> live</span>
+      <div class="idle">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="2" y="4" width="20" height="15" rx="2"/><path d="M2 8h20M6 6h.01M9 6h.01"/></svg>
+        <div>The agent's browser appears here while it works.<br>Nothing opens on your desktop.</div>
+      </div>
+      <img id="frame" alt="Live view of the page the agent is driving">
+    </div>
+    <div class="rail" id="rail"></div>
+  </section>
 </main>
-<div id="bar">
-  <input id="msg" placeholder="Interrupt the agent… (ask a question, say wait/skip/repeat/stop)">
-  <button id="send">Send</button>
-</div>
+
 <script>
-const chat=document.getElementById('chat'),stepsEl=document.getElementById('steps'),
-      dot=document.getElementById('dot'),wfSel=document.getElementById('wf'),
-      pauseBtn=document.getElementById('pause-btn');
-let ws,steps=[],paused=false;
+const $ = id => document.getElementById(id);
+const log = $('log'), rail = $('rail'), viewport = $('viewport');
+let ws, steps = [], paused = false, running = false;
 
-function setPauseUI(running,isPaused){
-  paused=isPaused;
-  pauseBtn.disabled=!running;
-  pauseBtn.textContent=isPaused?'Resume':'Pause';
+/* ---------- voice: pick a natural one, not whatever the OS defaults to ---------- */
+// Ranked by how they read long sentences aloud; first match on the machine wins.
+const VOICE_RANK = ['Samantha', 'Ava', 'Allison', 'Serena', 'Google US English',
+                    'Google UK English Female', 'Karen', 'Moira', 'Daniel', 'Alex'];
+let voices = [], chosen = null;
+
+function loadVoices() {
+  voices = speechSynthesis.getVoices().filter(v => v.lang.startsWith('en'));
+  if (!voices.length) return;
+  const pick = $('voice-pick');
+  const best = VOICE_RANK.map(n => voices.find(v => v.name.startsWith(n))).find(Boolean) || voices[0];
+  chosen = chosen || best;
+  pick.innerHTML = voices.map(v =>
+    `<option${v.name === chosen.name ? ' selected' : ''}>${v.name}</option>`).join('');
+  pick.onchange = () => { chosen = voices.find(v => v.name === pick.value); };
+}
+speechSynthesis.onvoiceschanged = loadVoices;
+loadVoices();
+
+function speak(text) {
+  if (!$('voice').checked || !('speechSynthesis' in window) || !text) return;
+  speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(text.replace(/[*_`#]/g, ''));
+  if (chosen) { u.voice = chosen; u.lang = chosen.lang; }
+  u.rate = 1.02; u.pitch = 1.0; u.volume = 1.0;
+  speechSynthesis.speak(u);
 }
 
-function line(text,cls){const d=document.createElement('div');
-  d.className='msg '+(cls||'');d.textContent=text;chat.appendChild(d);
-  chat.scrollTop=chat.scrollHeight;}
-function speak(text){
-  if(!document.getElementById('voice').checked || !('speechSynthesis' in window) || !text)return;
-  window.speechSynthesis.cancel();
-  const utterance=new SpeechSynthesisUtterance(text);
-  utterance.lang='en-US';utterance.rate=1.0;utterance.pitch=1.05;
-  window.speechSynthesis.speak(utterance);
+/* ---------- chat ---------- */
+const ICON = {
+  agent: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="7" width="16" height="12" rx="3"/><path d="M12 3v4M9 13h.01M15 13h.01"/></svg>',
+  guard: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l8 3v6c0 5-3.4 8.2-8 9-4.6-.8-8-4-8-9V6l8-3z"/></svg>',
+  heal:  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 3v6h-6"/></svg>'
+};
+function bubble(text, kind, label) {
+  const d = document.createElement('div');
+  d.className = 'bubble ' + (kind || 'agent');
+  if (label) {
+    const who = document.createElement('div');
+    who.className = 'who';
+    who.innerHTML = (ICON[label.icon] || ICON.agent) + label.text;
+    d.appendChild(who);
+  }
+  d.appendChild(document.createTextNode(text));
+  log.appendChild(d);
+  log.scrollTop = log.scrollHeight;
 }
 
-function renderSteps(){stepsEl.innerHTML='';steps.forEach((s,i)=>{
-  const d=document.createElement('div');d.className='step '+(s.status||'');
-  d.innerHTML='<span class="n">'+(i+1)+'</span><span>'+s.id+'</span>';
-  stepsEl.appendChild(d);});}
-
-function mark(id,status){const s=steps.find(x=>x.id===id);
-  if(s){s.status=status;renderSteps();}}
-
-async function loadWorkflows(){
-  const rows=await (await fetch('/api/workflows')).json();
-  wfSel.innerHTML=rows.map(r=>`<option value="${r.id}">${r.title} (${r.n_steps} steps)</option>`).join('');
+/* ---------- step rail ---------- */
+function renderSteps() {
+  rail.innerHTML = '<h2>Plan</h2>' + steps.map((s, i) =>
+    `<div class="step ${s.status || ''}"><span class="n">${i + 1}</span><span>${s.intent || s.id}</span></div>`
+  ).join('');
+  const active = rail.querySelector('.step.running');
+  if (active) active.scrollIntoView({block: 'nearest', behavior: 'smooth'});
+}
+function mark(id, status) {
+  const s = steps.find(x => x.id === id);
+  if (s) { s.status = status; renderSteps(); }
 }
 
-function connect(){
-  const params=new URLSearchParams(location.search);
-  const protocol=location.protocol==='https:'?'wss':'ws';
-  const token=params.get('token')||'';
-  ws=new WebSocket(`${protocol}://${location.host}/ws/s-${Date.now()}?token=${encodeURIComponent(token)}`);
-  ws.onopen=()=>dot.classList.add('on');
-  ws.onclose=()=>{dot.classList.remove('on');setTimeout(connect,1500);};
-  ws.onmessage=e=>{
-    const ev=JSON.parse(e.data);
-    switch(ev.type){
-      case 'run_started': chat.innerHTML='';line('Starting: '+ev.text,'meta');setPauseUI(true,false);break;
+async function loadWorkflows() {
+  const rows = await (await fetch('/api/workflows')).json();
+  $('wf').innerHTML = rows.map(r => `<option value="${r.id}">${r.title} · ${r.n_steps} steps</option>`).join('');
+  loadPlan();
+}
+async function loadPlan() {
+  if (running) return;
+  const spec = await (await fetch('/api/workflows/' + $('wf').value)).json();
+  steps = (spec.steps || []).map(s => ({id: s.id, intent: s.intent}));
+  renderSteps();
+}
+$('wf').onchange = loadPlan;
+
+/* ---------- socket ---------- */
+function setRunning(on, isPaused) {
+  running = on; paused = isPaused;
+  $('pause').disabled = !on;
+  $('pause').lastChild.textContent = isPaused ? 'Resume' : 'Pause';
+  $('go').disabled = on;
+  $('livetag').hidden = !on;
+}
+
+function connect() {
+  const token = new URLSearchParams(location.search).get('token') || '';
+  const protocol = location.protocol === 'https:' ? 'wss' : 'ws';
+  ws = new WebSocket(`${protocol}://${location.host}/ws/s-${Date.now()}?token=${encodeURIComponent(token)}`);
+  ws.onopen = () => $('dot').classList.add('on');
+  ws.onclose = () => { $('dot').classList.remove('on'); setTimeout(connect, 1500); };
+  ws.onmessage = e => {
+    const ev = JSON.parse(e.data);
+    switch (ev.type) {
+      case 'run_started':
+        log.innerHTML = ''; bubble('Starting: ' + ev.text, 'meta');
+        steps.forEach(s => s.status = ''); renderSteps(); setRunning(true, false); break;
       case 'step_start':
-        if(!steps.find(s=>s.id===ev.step_id)){steps.push({id:ev.step_id});}
-        mark(ev.step_id,'running');break;
-      case 'narration': line(ev.text,'narration');speak(ev.text);break;
-      case 'step_done': mark(ev.step_id,'done');break;
-      case 'step_failed': mark(ev.step_id,'failed');line(ev.text,'error');break;
-      case 'heal': line(ev.text,'heal');break;
-      case 'blocked': mark(ev.step_id,'blocked');line(ev.text,'blocked');break;
-      case 'answer': line(ev.text,'narration');speak(ev.text);break;
-      case 'paused': line(ev.text,'meta');speak(ev.text);setPauseUI(true,true);break;
-      case 'resumed': line(ev.text,'meta');speak(ev.text);setPauseUI(true,false);break;
-      case 'frame': if(ev.data&&ev.data.src){document.getElementById('browser-frame').src=ev.data.src;}break;
-      case 'teach_progress': line(ev.text,'meta');break;
-      case 'teach_question': line(ev.text,'error');break;
-      case 'teach_complete': line(ev.text,'heal');loadWorkflows();break;
-      case 'run_completed': line('Walkthrough complete.','meta');setPauseUI(false,false);break;
-      case 'run_aborted': line('Run stopped.','meta');setPauseUI(false,false);break;
-      case 'error': line(ev.text,'error');break;
+        if (!steps.find(s => s.id === ev.step_id)) steps.push({id: ev.step_id, intent: ev.text});
+        mark(ev.step_id, 'running'); break;
+      case 'narration': bubble(ev.text, 'agent', {icon: 'agent', text: 'agent'}); speak(ev.text); break;
+      case 'answer':    bubble(ev.text, 'agent', {icon: 'agent', text: 'answer'}); speak(ev.text); break;
+      case 'step_done': mark(ev.step_id, 'done'); break;
+      case 'step_failed': mark(ev.step_id, 'failed'); bubble(ev.text, 'alert'); break;
+      case 'step_skipped': mark(ev.step_id, 'skipped'); break;
+      case 'heal': bubble(ev.text, 'heal', {icon: 'heal', text: 'self-healed'}); break;
+      case 'blocked': mark(ev.step_id, 'blocked');
+        bubble(ev.text, 'guard', {icon: 'guard', text: 'refused'}); speak(ev.text); break;
+      case 'paused': bubble(ev.text, 'meta'); speak(ev.text); setRunning(true, true); break;
+      case 'resumed': bubble(ev.text, 'meta'); speak(ev.text); setRunning(true, false); break;
+      case 'plan_changed': bubble(ev.text || 'Plan changed.', 'meta'); break;
+      case 'interrupt_received': break;
+      case 'frame':
+        if (ev.data && ev.data.src) { $('frame').src = ev.data.src; viewport.classList.add('live'); }
+        break;
+      case 'teach_progress': bubble(ev.text, 'meta'); break;
+      case 'teach_question': bubble(ev.text, 'guard', {icon: 'guard', text: 'needs you'}); speak(ev.text); break;
+      case 'teach_complete': bubble(ev.text, 'heal', {icon: 'heal', text: 'learned'}); loadWorkflows(); break;
+      case 'run_completed': bubble('Walkthrough complete.', 'meta'); setRunning(false, false); break;
+      case 'run_aborted': bubble('Run stopped.', 'meta'); setRunning(false, false); break;
+      case 'error': bubble(ev.text, 'alert'); break;
     }
   };
 }
 
-document.getElementById('go').onclick=()=>{
-  steps=[];renderSteps();
-  ws.send(JSON.stringify({kind:'start_run',workflow_id:wfSel.value}));};
-document.getElementById('teach-go').onclick=()=>{
-  const utterance=document.getElementById('teach-text').value.trim();
-  const site_hint=document.getElementById('teach-url').value.trim();
-  if(!utterance||!site_hint){line('Describe the workflow and provide its starting URL.','error');return;}
-  ws.send(JSON.stringify({kind:'teach_workflow',utterance,site_hint}));
+/* ---------- controls ---------- */
+$('go').onclick = () => ws.send(JSON.stringify({kind: 'start_run', workflow_id: $('wf').value}));
+$('pause').onclick = () => ws.send(JSON.stringify({kind: 'pause_control', action: paused ? 'resume' : 'pause'}));
+$('teach-toggle').onclick = () => $('teach').classList.toggle('open');
+$('teach-go').onclick = () => {
+  const utterance = $('teach-text').value.trim(), site_hint = $('teach-url').value.trim();
+  if (!utterance || !site_hint) return bubble('Describe the workflow and give its starting URL.', 'alert');
+  ws.send(JSON.stringify({kind: 'teach_workflow', utterance, site_hint}));
 };
-pauseBtn.onclick=()=>{
-  const action=paused?'resume':'pause';
-  ws.send(JSON.stringify({kind:'pause_control',action}));
-};
-document.getElementById('send').onclick=send;
-document.getElementById('msg').addEventListener('keydown',e=>{if(e.key==='Enter')send();});
-function send(){const i=document.getElementById('msg');if(!i.value.trim())return;
-  line(i.value,'meta');ws.send(JSON.stringify({kind:'user_message',text:i.value}));
-  i.value='';}
+function send() {
+  const i = $('msg');
+  if (!i.value.trim()) return;
+  bubble(i.value, 'you');
+  ws.send(JSON.stringify({kind: 'user_message', text: i.value}));
+  i.value = '';
+}
+$('send').onclick = send;
+$('msg').addEventListener('keydown', e => { if (e.key === 'Enter') send(); });
 
-loadWorkflows();connect();
+loadWorkflows(); connect();
 </script>
-</body>
-</html>
+</body></html>

@@ -90,3 +90,23 @@ def test_preference_rank_orders_strategies():
         Locator(strategy="css", value="div"),
         Locator(strategy="test_id", value="x")])
     assert b.preference_rank() == [5, 0]
+
+
+def test_a_workflow_with_a_gap_in_its_step_numbers_is_rejected():
+    """A hole in the numbering makes the runtime re-run one step forever."""
+    import pytest
+    from datetime import datetime, timezone
+
+    from app.schemas import ActionType, Step, WorkflowSpec
+
+    def step(step_id: str, index: int) -> Step:
+        return Step(id=step_id, index=index, action=ActionType.SCROLL,
+                    intent="scroll down", narration_hint="scrolling")
+
+    ok = WorkflowSpec(id="w", title="w", target_domain="localhost", entry_url="http://localhost/",
+                      steps=[step("a", 0), step("b", 1)], taught_at=datetime.now(timezone.utc))
+    assert [s.index for s in ok.steps] == [0, 1]
+
+    with pytest.raises(ValueError, match="numbered in order"):
+        WorkflowSpec(id="w", title="w", target_domain="localhost", entry_url="http://localhost/",
+                     steps=[step("a", 0), step("b", 2)], taught_at=datetime.now(timezone.utc))

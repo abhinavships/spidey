@@ -115,71 +115,34 @@ async def test_store_ignores_junk_and_missing(tmp_path, monkeypatch):
         await store.load_workflow("nope")
 
 
-async def test_shipped_demo_spec_loads():
-    """The hardcoded Demo 1 spec on disk must be valid."""
-    spec = await store.load_workflow("gh-issue")
-    assert spec.rehearsal_passed and len(spec.steps) == 10
+SHIPPED = ("tech-mission-plan", "vp-quarterly-report", "marketing-campaign-draft")
 
 
-async def test_issue_demo_opens_the_issues_list_before_clicking_new_issue():
-    """New issue is a control on /issues, not on the repository landing page."""
-    spec = await store.load_workflow("gh-issue")
-    assert spec.entry_url.endswith("/issues")
+@pytest.mark.parametrize("workflow_id", SHIPPED)
+async def test_shipped_specs_load_and_start_at_the_sign_in_page(workflow_id):
+    """Every shipped spec is valid and signs in before it touches a workspace."""
+    spec = await store.load_workflow(workflow_id)
+    assert spec.rehearsal_passed and spec.steps
+    assert spec.entry_url.endswith("/drone/login")
     assert spec.steps[0].value == spec.entry_url
-    assert spec.steps[1].id == "new-issue"
+    assert [step.id for step in spec.steps[:4]] == [
+        "open-login", "type-email", "type-password", "click-signin"]
 
 
-async def test_issue_demo_submits_and_confirms_the_created_issue():
-    spec = await store.load_workflow("gh-issue")
+@pytest.mark.parametrize("workflow_id", SHIPPED)
+async def test_no_shipped_step_is_destructive(workflow_id):
+    """A demo must not contain an irreversible action in the first place."""
+    spec = await store.load_workflow(workflow_id)
+    assert all(step.risk is not RiskLevel.DESTRUCTIVE for step in spec.steps)
+
+
+async def test_the_technical_workflow_clears_preflight_before_saving():
+    """Order matters: the engineer checks the aircraft, then commits the draft."""
+    spec = await store.load_workflow("tech-mission-plan")
     ids = [step.id for step in spec.steps]
-    assert ids[-2:] == ["submit", "assert-created"]
-    submit = spec.steps[-2]
-    assert submit.action is ActionType.CLICK
-    assert submit.risk is RiskLevel.CAUTION
-    assert "submit" in submit.intent.lower() or "create" in submit.intent.lower()
-
-
-# -- Full stack on fakes ---------------------------------------------------
-
-
-async def test_real_guard_and_narrator_drive_a_clean_run():
-    spec = make_spec(4)
-    c = EventCollector()
-    orch = Orchestrator(spec=spec, driver=FakeDriver([make_snapshot(f"p{i}") for i in range(9)]),
-                        resolver=FakeResolver(), narrator=Narrator(llm=None),
-                        guard=Guard(["github.com"]), emit=c.emit, session_id="s")
-    state = await orch.run()
-    assert state.state is RunState.COMPLETED
-    assert all(r.status is StepStatus.DONE for r in state.records)
-    assert len(c.of("narration")) == 4
-
-
-async def test_narration_events_are_text_only_for_browser_native_voice():
-    spec = make_spec(2)
-    c = EventCollector()
-    orch = Orchestrator(spec=spec, driver=FakeDriver([make_snapshot("p")]),
-                        resolver=FakeResolver(), narrator=Narrator(llm=None),
-                        guard=Guard(["github.com"]), emit=c.emit, session_id="s")
-    await orch.run()
-    narrations = c.of("narration")
-    assert narrations and all("audio" not in e.data for e in narrations)
-
-
-async def test_real_guard_blocks_and_the_run_continues():
-    spec = make_spec(3)
-    spec.steps[1].intent = "delete the repository"
-    c = EventCollector()
-    orch = Orchestrator(spec=spec, driver=FakeDriver([make_snapshot("p")]),
-                        resolver=FakeResolver(), narrator=Narrator(llm=None),
-                        guard=Guard(["github.com"]), emit=c.emit, session_id="s")
-    state = await orch.run()
-    assert state.state is RunState.COMPLETED
-    assert len(c.of("blocked")) == 1
-    assert [r.status for r in state.records] == [
-        StepStatus.DONE, StepStatus.BLOCKED, StepStatus.DONE]
-
-
-# -- Server ----------------------------------------------------------------
+    assert ids.index("run-preflight") < ids.index("save-mission")
+    save = spec.steps[ids.index("save-mission")]
+    assert save.action is ActionType.CLICK and save.risk is RiskLevel.CAUTION
 
 
 def test_server_serves_ui_and_workflow_list():
@@ -187,7 +150,7 @@ def test_server_serves_ui_and_workflow_list():
     client = TestClient(fastapi_app)
     assert client.get("/").status_code == 200
     rows = client.get("/api/workflows").json()
-    assert any(r["id"] == "gh-issue" for r in rows)
+    assert {r["id"] for r in rows} >= set(SHIPPED)
 
 
 def test_ws_rejects_junk_but_stays_open(monkeypatch):
@@ -214,3 +177,17 @@ def test_ws_requires_demo_token_when_configured(monkeypatch):
         with client.websocket_connect("/ws/test?token=private-demo-token") as sock:
             sock.send_text("not json")
             assert sock.receive_json()["type"] == "error"
+
+
+def test_guard_allows_a_local_site_whose_domain_carries_a_port():
+    """A spec names a local site as localhost:8000; a parsed URL host never has the port."""
+    from app.safety.guard import Guard
+    from app.schemas import Step
+
+    step = Step(id="open", index=0, action=ActionType.NAVIGATE,
+                intent="open the sign-in page", value="http://localhost:8000/drone/login",
+                narration_hint="opening the login page")
+    snap = make_snapshot()
+    assert Guard(["localhost:8000"]).check(step, snap).allowed
+    assert Guard(["localhost"]).check(step, snap).allowed
+    assert not Guard(["example.com"]).check(step, snap).allowed

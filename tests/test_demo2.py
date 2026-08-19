@@ -220,3 +220,53 @@ async def test_malformed_model_output_falls_back_without_raising():
     answer = await QA(llm=FakeLLM(["not json"]).complete).answer("hello", make_spec(5), 0, make_snapshot())
     assert interruption.kind is InterruptKind.UNCLEAR
     assert not answer.grounded
+
+
+async def test_qa_sends_only_the_evidence_the_question_is_about():
+    """Retrieval, not the whole walkthrough, is what reaches the model."""
+    import json as _json
+
+    from app.schemas import StepKnowledge
+    from datetime import datetime, timezone
+
+    spec = make_spec(2)
+    pages = {
+        spec.steps[0].id: "Issues list. New issue button. Milestones.",
+        spec.steps[1].id: "Apply labels to this issue: bug, enhancement, question.",
+    }
+    spec = spec.model_copy(update={"steps": [
+        step.model_copy(update={"knowledge": StepKnowledge(
+            page_url="https://github.com/acme/demo", page_title="demo",
+            a11y_digest="", visible_text=pages[step.id],
+            observed_effect="done", captured_at=datetime.now(timezone.utc))})
+        for step in spec.steps
+    ]})
+
+    seen = {}
+
+    async def spy(system, user, json_schema=None, max_tokens=0):
+        seen["user"] = _json.loads(user)
+        return {"text": "Labels categorise the issue.", "grounded": True,
+                "sources": [spec.steps[1].id]}
+
+    answer = await QA(llm=spy).answer("which labels can I apply", spec, 1, make_snapshot())
+
+    sources = {chunk["source"] for chunk in seen["user"]["evidence"]}
+    assert spec.steps[1].id in sources
+    assert spec.steps[0].id not in sources, sources
+    assert answer.grounded
+
+
+async def test_qa_declines_when_nothing_retrieved_matches_the_question():
+    """No overlapping evidence means no model call and no invented answer."""
+    called = False
+
+    async def never(*args, **kwargs):
+        nonlocal called
+        called = True
+        return {"text": "sure", "grounded": True, "sources": ["live_page"]}
+
+    answer = await QA(llm=never).answer("what are your enterprise pricing tiers", make_spec(2), 0, make_snapshot())
+
+    assert not called
+    assert not answer.grounded

@@ -39,8 +39,15 @@ _CAUTION = _compile(CAUTION_PHRASES)
 
 
 def _host_allowed(host: str, allowed: list[str]) -> bool:
-    host = (host or "").lower().removeprefix("www.")
-    return any(host == a.lower() or host.endswith("." + a.lower()) for a in allowed)
+    """True when a URL's host is on the allowlist, port and www. notwithstanding.
+
+    An allowed domain may be written with a port ("localhost:8000") because that
+    is how a spec names a local site, while the host parsed off a URL never has
+    one — so both sides are normalised before comparing.
+    """
+    host = (host or "").lower().removeprefix("www.").partition(":")[0]
+    names = [a.lower().removeprefix("www.").partition(":")[0] for a in allowed]
+    return any(host == name or host.endswith("." + name) for name in names if name)
 
 
 class Guard:

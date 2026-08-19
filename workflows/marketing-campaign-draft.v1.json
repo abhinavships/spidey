@@ -1,0 +1,313 @@
+{
+  "id": "marketing-campaign-draft",
+  "version": 1,
+  "title": "Draft a course intake campaign",
+  "description": "Sign in as marketing, compose an intake campaign for the commercial course, and save it as a draft.",
+  "target_domain": "localhost",
+  "entry_url": "http://localhost:8000/drone/login",
+  "steps": [
+    {
+      "id": "open-login",
+      "index": 0,
+      "action": "navigate",
+      "intent": "open the SkyLoop sign-in page",
+      "locator": null,
+      "value": "http://localhost:8000/drone/login",
+      "narration_hint": "opening SkyLoop",
+      "risk": "safe",
+      "knowledge": null,
+      "timeout_ms": 8000
+    },
+    {
+      "id": "type-email",
+      "index": 1,
+      "action": "type",
+      "intent": "type the marketing manager email address",
+      "locator": {
+        "intent": "the work email field",
+        "candidates": [
+          {
+            "strategy": "test_id",
+            "value": "email",
+            "name": null,
+            "exact": false
+          }
+        ],
+        "healed_at": null,
+        "heal_count": 0
+      },
+      "value": "mkt@skyloop.io",
+      "narration_hint": "signing in as the marketing manager",
+      "risk": "caution",
+      "knowledge": null,
+      "timeout_ms": 8000
+    },
+    {
+      "id": "type-password",
+      "index": 2,
+      "action": "type",
+      "intent": "type the account password",
+      "locator": {
+        "intent": "the password field",
+        "candidates": [
+          {
+            "strategy": "test_id",
+            "value": "password",
+            "name": null,
+            "exact": false
+          }
+        ],
+        "healed_at": null,
+        "heal_count": 0
+      },
+      "value": "flightdemo",
+      "narration_hint": "entering the password",
+      "risk": "caution",
+      "knowledge": null,
+      "timeout_ms": 8000
+    },
+    {
+      "id": "click-signin",
+      "index": 3,
+      "action": "click",
+      "intent": "click Sign in",
+      "locator": {
+        "intent": "the Sign in button",
+        "candidates": [
+          {
+            "strategy": "test_id",
+            "value": "sign-in",
+            "name": null,
+            "exact": false
+          },
+          {
+            "strategy": "role",
+            "value": "button",
+            "name": "Sign in",
+            "exact": false
+          },
+          {
+            "strategy": "text",
+            "value": "Sign in",
+            "name": null,
+            "exact": false
+          }
+        ],
+        "healed_at": null,
+        "heal_count": 0
+      },
+      "value": null,
+      "narration_hint": "signing in",
+      "risk": "caution",
+      "knowledge": null,
+      "timeout_ms": 8000
+    },
+    {
+      "id": "name-campaign",
+      "index": 4,
+      "action": "type",
+      "intent": "type the campaign name",
+      "locator": {
+        "intent": "the campaign name field",
+        "candidates": [
+          {
+            "strategy": "test_id",
+            "value": "campaign-name",
+            "name": null,
+            "exact": false
+          }
+        ],
+        "healed_at": null,
+        "heal_count": 0
+      },
+      "value": "Autumn intake \u2014 Commercial Ops",
+      "narration_hint": "naming the campaign",
+      "risk": "caution",
+      "knowledge": null,
+      "timeout_ms": 8000
+    },
+    {
+      "id": "pick-course",
+      "index": 5,
+      "action": "select",
+      "intent": "choose the Commercial Operations course",
+      "locator": {
+        "intent": "the course dropdown",
+        "candidates": [
+          {
+            "strategy": "test_id",
+            "value": "course",
+            "name": null,
+            "exact": false
+          }
+        ],
+        "healed_at": null,
+        "heal_count": 0
+      },
+      "value": "commercial",
+      "narration_hint": "choosing the course",
+      "risk": "safe",
+      "knowledge": null,
+      "timeout_ms": 8000
+    },
+    {
+      "id": "pick-segment",
+      "index": 6,
+      "action": "select",
+      "intent": "choose the enterprise fleet audience",
+      "locator": {
+        "intent": "the audience segment dropdown",
+        "candidates": [
+          {
+            "strategy": "test_id",
+            "value": "segment",
+            "name": null,
+            "exact": false
+          }
+        ],
+        "healed_at": null,
+        "heal_count": 0
+      },
+      "value": "enterprise",
+      "narration_hint": "choosing the audience",
+      "risk": "safe",
+      "knowledge": null,
+      "timeout_ms": 8000
+    },
+    {
+      "id": "channel-email",
+      "index": 7,
+      "action": "click",
+      "intent": "tick the email channel",
+      "locator": {
+        "intent": "the email channel checkbox",
+        "candidates": [
+          {
+            "strategy": "test_id",
+            "value": "channel-email",
+            "name": null,
+            "exact": false
+          }
+        ],
+        "healed_at": null,
+        "heal_count": 0
+      },
+      "value": null,
+      "narration_hint": "adding the email channel",
+      "risk": "safe",
+      "knowledge": null,
+      "timeout_ms": 8000
+    },
+    {
+      "id": "channel-webinar",
+      "index": 8,
+      "action": "click",
+      "intent": "tick the webinar invite channel",
+      "locator": {
+        "intent": "the webinar channel checkbox",
+        "candidates": [
+          {
+            "strategy": "test_id",
+            "value": "channel-webinar",
+            "name": null,
+            "exact": false
+          }
+        ],
+        "healed_at": null,
+        "heal_count": 0
+      },
+      "value": null,
+      "narration_hint": "adding the webinar channel",
+      "risk": "safe",
+      "knowledge": null,
+      "timeout_ms": 8000
+    },
+    {
+      "id": "set-date",
+      "index": 9,
+      "action": "type",
+      "intent": "set the send date",
+      "locator": {
+        "intent": "the send date field",
+        "candidates": [
+          {
+            "strategy": "test_id",
+            "value": "send-on",
+            "name": null,
+            "exact": false
+          }
+        ],
+        "healed_at": null,
+        "heal_count": 0
+      },
+      "value": "2026-09-15",
+      "narration_hint": "scheduling the send",
+      "risk": "caution",
+      "knowledge": null,
+      "timeout_ms": 8000
+    },
+    {
+      "id": "write-headline",
+      "index": 10,
+      "action": "type",
+      "intent": "write the campaign headline",
+      "locator": {
+        "intent": "the headline box",
+        "candidates": [
+          {
+            "strategy": "test_id",
+            "value": "headline",
+            "name": null,
+            "exact": false
+          }
+        ],
+        "healed_at": null,
+        "heal_count": 0
+      },
+      "value": "Fly commercially in six weeks.",
+      "narration_hint": "writing the headline",
+      "risk": "caution",
+      "knowledge": null,
+      "timeout_ms": 8000
+    },
+    {
+      "id": "save-campaign",
+      "index": 11,
+      "action": "click",
+      "intent": "save the campaign draft",
+      "locator": {
+        "intent": "the Save campaign draft button",
+        "candidates": [
+          {
+            "strategy": "test_id",
+            "value": "save-campaign",
+            "name": null,
+            "exact": false
+          },
+          {
+            "strategy": "role",
+            "value": "button",
+            "name": "Save campaign draft",
+            "exact": false
+          },
+          {
+            "strategy": "text",
+            "value": "Save campaign draft",
+            "name": null,
+            "exact": false
+          }
+        ],
+        "healed_at": null,
+        "heal_count": 0
+      },
+      "value": null,
+      "narration_hint": "saving the draft",
+      "risk": "caution",
+      "knowledge": null,
+      "timeout_ms": 8000
+    }
+  ],
+  "taught_at": "2026-08-19T12:55:10.769631+00:00",
+  "rehearsal_passed": true,
+  "source_utterance": "Sign in as marketing, compose an intake campaign for the commercial course, and save it as a draft."
+}

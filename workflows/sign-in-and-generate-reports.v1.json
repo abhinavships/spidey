@@ -1,0 +1,355 @@
+{
+  "id": "sign-in-and-generate-reports",
+  "version": 1,
+  "title": "Sign in and generate reports",
+  "description": "",
+  "target_domain": "localhost:8000",
+  "entry_url": "http://localhost:8000/drone/login",
+  "steps": [
+    {
+      "id": "1-open-the-sign-in-page",
+      "index": 0,
+      "action": "navigate",
+      "intent": "open the sign-in page",
+      "locator": null,
+      "value": "http://localhost:8000/drone/login",
+      "narration_hint": "opening the login page",
+      "risk": "safe",
+      "knowledge": {
+        "page_url": "http://localhost:8000/drone/login",
+        "page_title": "Sign in \u2014 SkyLoop Flight Academy",
+        "a11y_digest": "- img\n- text: SkyLoop Flight Academy\n- paragraph: Drone pilot training & fleet operations\n- text: Work email\n- textbox \"Work email\"\n- text: Password\n- textbox \"Password\"\n- button \"Sign in\"\n- text: Demo accounts \u2014 password\n- code: flightdemo\n- code: vp@skyloop.io\n- text: \u00b7\n- code: tech@skyloop.io\n- text: \u00b7\n- code: mkt@skyloop.io",
+        "visible_text": "SkyLoop Flight Academy\n\nDrone pilot training & fleet operations\n\nWork email\nPassword\nSign in\nDemo accounts \u2014 password flightdemo\nvp@skyloop.io \u00b7 tech@skyloop.io \u00b7 mkt@skyloop.io",
+        "screenshot_path": null,
+        "observed_effect": "open the sign-in page went through",
+        "captured_at": "2026-08-19T15:39:06.471903Z"
+      },
+      "timeout_ms": 8000
+    },
+    {
+      "id": "2-the-work-email-field",
+      "index": 1,
+      "action": "type",
+      "intent": "the Work email field",
+      "locator": {
+        "intent": "the Work email field",
+        "candidates": [
+          {
+            "strategy": "css",
+            "value": "#work-email-input",
+            "name": null,
+            "exact": false
+          },
+          {
+            "strategy": "label",
+            "value": "Work email",
+            "name": null,
+            "exact": false
+          },
+          {
+            "strategy": "placeholder",
+            "value": "Work email",
+            "name": null,
+            "exact": false
+          },
+          {
+            "strategy": "test_id",
+            "value": "work-email",
+            "name": null,
+            "exact": false
+          },
+          {
+            "strategy": "role",
+            "value": "button",
+            "name": "Work email",
+            "exact": false
+          },
+          {
+            "strategy": "text",
+            "value": "Work email",
+            "name": null,
+            "exact": false
+          }
+        ],
+        "healed_at": null,
+        "heal_count": 0
+      },
+      "value": "vp@skyloop.io",
+      "narration_hint": "entering the email",
+      "risk": "caution",
+      "knowledge": {
+        "page_url": "http://localhost:8000/drone/login",
+        "page_title": "Sign in \u2014 SkyLoop Flight Academy",
+        "a11y_digest": "- img\n- text: SkyLoop Flight Academy\n- paragraph: Drone pilot training & fleet operations\n- text: Work email\n- textbox \"Work email\": vp@skyloop.io\n- text: Password\n- textbox \"Password\"\n- button \"Sign in\"\n- text: Demo accounts \u2014 password\n- code: flightdemo\n- code: vp@skyloop.io\n- text: \u00b7\n- code: tech@skyloop.io\n- text: \u00b7\n- code: mkt@skyloop.io",
+        "visible_text": "SkyLoop Flight Academy\n\nDrone pilot training & fleet operations\n\nWork email\nPassword\nSign in\nDemo accounts \u2014 password flightdemo\nvp@skyloop.io \u00b7 tech@skyloop.io \u00b7 mkt@skyloop.io",
+        "screenshot_path": null,
+        "observed_effect": "the Work email field went through",
+        "captured_at": "2026-08-19T15:39:33.408640Z"
+      },
+      "timeout_ms": 8000
+    },
+    {
+      "id": "3-the-password-field",
+      "index": 2,
+      "action": "type",
+      "intent": "the Password field",
+      "locator": {
+        "intent": "the Password field",
+        "candidates": [
+          {
+            "strategy": "css",
+            "value": "#textbox \"Password\"",
+            "name": "Password",
+            "exact": false
+          },
+          {
+            "strategy": "label",
+            "value": "Password",
+            "name": null,
+            "exact": false
+          },
+          {
+            "strategy": "placeholder",
+            "value": "Password",
+            "name": null,
+            "exact": false
+          },
+          {
+            "strategy": "test_id",
+            "value": "password",
+            "name": null,
+            "exact": false
+          },
+          {
+            "strategy": "role",
+            "value": "button",
+            "name": "Password",
+            "exact": false
+          },
+          {
+            "strategy": "text",
+            "value": "Password",
+            "name": null,
+            "exact": false
+          }
+        ],
+        "healed_at": null,
+        "heal_count": 0
+      },
+      "value": "flightdemo",
+      "narration_hint": "entering the password",
+      "risk": "caution",
+      "knowledge": {
+        "page_url": "http://localhost:8000/drone/login",
+        "page_title": "Sign in \u2014 SkyLoop Flight Academy",
+        "a11y_digest": "- img\n- text: SkyLoop Flight Academy\n- paragraph: Drone pilot training & fleet operations\n- text: Work email\n- textbox \"Work email\": vp@skyloop.io\n- text: Password\n- textbox \"Password\": flightdemo\n- button \"Sign in\"\n- text: Demo accounts \u2014 password\n- code: flightdemo\n- code: vp@skyloop.io\n- text: \u00b7\n- code: tech@skyloop.io\n- text: \u00b7\n- code: mkt@skyloop.io",
+        "visible_text": "SkyLoop Flight Academy\n\nDrone pilot training & fleet operations\n\nWork email\nPassword\nSign in\nDemo accounts \u2014 password flightdemo\nvp@skyloop.io \u00b7 tech@skyloop.io \u00b7 mkt@skyloop.io",
+        "screenshot_path": null,
+        "observed_effect": "the Password field went through",
+        "captured_at": "2026-08-19T15:39:55.421416Z"
+      },
+      "timeout_ms": 8000
+    },
+    {
+      "id": "4-click-sign-in",
+      "index": 3,
+      "action": "click",
+      "intent": "click Sign in",
+      "locator": {
+        "intent": "click Sign in",
+        "candidates": [
+          {
+            "strategy": "css",
+            "value": "button[type=\"submit\"]",
+            "name": "Sign in ",
+            "exact": false
+          },
+          {
+            "strategy": "css",
+            "value": "button Sign in",
+            "name": null,
+            "exact": false
+          },
+          {
+            "strategy": "label",
+            "value": "click Sign in",
+            "name": null,
+            "exact": false
+          },
+          {
+            "strategy": "placeholder",
+            "value": "click Sign in",
+            "name": null,
+            "exact": false
+          },
+          {
+            "strategy": "test_id",
+            "value": "click-sign-in",
+            "name": null,
+            "exact": false
+          },
+          {
+            "strategy": "role",
+            "value": "button",
+            "name": "click Sign in",
+            "exact": false
+          },
+          {
+            "strategy": "text",
+            "value": "click Sign in",
+            "name": null,
+            "exact": false
+          }
+        ],
+        "healed_at": "2026-08-19T15:40:08.469400Z",
+        "heal_count": 1
+      },
+      "value": null,
+      "narration_hint": "signing in",
+      "risk": "safe",
+      "knowledge": {
+        "page_url": "http://localhost:8000/drone/vp/readiness",
+        "page_title": "Fleet readiness \u2014 SkyLoop",
+        "a11y_digest": "- banner:\n  - img\n  - text: SkyLoop Flight Academy Priya Raghavan Vice President, Flight Ops\n  - button \"Sign out\"\n- main:\n  - heading \"Fleet readiness & training outcomes\" [level=1]\n  - paragraph: Where the programme stands this quarter, and what goes in the board pack.\n  - text: Reporting quarter\n  - combobox \"Reporting quarter\":\n    - option \"2026-Q1\"\n    - option \"2026-Q2\" [selected]\n    - option \"2026-Q3\"\n  - button \"Generate quarterly report\"\n  - text: Read-only. Nothing here changes fleet or training records. 60% Fleet ready to fly 47 Pilots certified 104% of target 45 1.37 Incidents / 1k flight hours 2 across 1465 h $132 Cost per flight hour 72 in pipeline\n  - heading \"Airframe availability\" [level=2]\n  - table:\n    - rowgroup:\n      - row \"Tail Model Hours Battery Status\":\n        - columnheader \"Tail\"\n        - columnheader \"Model\"\n        - columnheader \"Hours\"\n        - columnheader \"Battery\"\n        - columnheader \"Status\"\n    - rowgroup:\n      - row \"X4-01 SkyLoop X4 412 91% ready\":\n        - cell \"X4-01\"\n        - cell \"SkyLoop X4\"\n        - cell \"412\"\n        - cell \"91%\"\n        - cell \"ready\"\n      - row \"X4-02 SkyLoop X4 388 74% ready\":\n        - cell \"X4-02\"\n        - cell \"SkyLoop X4\"\n        - cell \"388\"\n        - cell \"74%\"\n        - cell \"ready\"\n      - row \"X4-03 SkyLoop X4 967 52% maintenance\":\n        - cell \"X4-03\"\n        - cell \"SkyLoop X4\"\n        - cell \"967\"\n        - cell \"52%\"\n        - cell \"maintenance\"\n      - row \"H2-07 SkyLoop Heavy 2 145 96% ready\":\n        - cell \"H2-07\"\n        - cell \"SkyLoop Heavy 2\"\n        - cell \"145\"\n        - cell \"96%\"\n        - cell \"ready\"\n      - row \"H2-08 SkyLoop Heavy 2 201 88% grounded\":\n        - cell \"H2-08\"\n        - cell \"SkyLoop Heavy 2\"\n        - cell \"201\"\n        - cell \"88%\"\n        - cell \"grounded\"\n  - heading \"Quarterly report\" [level=2]\n  - text: No report generated yet. Pick a quarter and press Generate quarterly report.",
+        "visible_text": "SkyLoop Flight Academy\nPriya Raghavan\nVice President, Flight Ops\nSign out\nFleet readiness & training outcomes\n\nWhere the programme stands this quarter, and what goes in the board pack.\n\nReporting quarter\n2026-Q1\n2026-Q2\n2026-Q3\nGenerate quarterly report\nRead-only. Nothing here changes fleet or training records.\n60%\nFleet ready to fly\n47\nPilots certified\n104% of target 45\n1.37\nIncidents / 1k flight hours\n2 across 1465 h\n$132\nCost per flight hour\n72 in pipeline\nAIRFRAME AVAILABILITY\nTAIL\tMODEL\tHOURS\tBATTERY\tSTATUS\nX4-01\tSkyLoop X4\t412\t91%\tready\nX4-02\tSkyLoop X4\t388\t74%\tready\nX4-03\tSkyLoop X4\t967\t52%\tmaintenance\nH2-07\tSkyLoop Heavy 2\t145\t96%\tready\nH2-08\tSkyLoop Heavy 2\t201\t88%\tgrounded\nQUARTERLY REPORT\nNo report generated yet. Pick a quarter and press Generate quarterly report.",
+        "screenshot_path": null,
+        "observed_effect": "the page moved to Fleet readiness \u2014 SkyLoop",
+        "captured_at": "2026-08-19T15:40:09.201520Z"
+      },
+      "timeout_ms": 8000
+    },
+    {
+      "id": "5-the-generate-quarterly-report-button",
+      "index": 4,
+      "action": "click",
+      "intent": "the Generate quarterly report button",
+      "locator": {
+        "intent": "the Generate quarterly report button",
+        "candidates": [
+          {
+            "strategy": "css",
+            "value": "button \"Generate quarterly report\"",
+            "name": null,
+            "exact": false
+          },
+          {
+            "strategy": "label",
+            "value": "Generate quarterly report",
+            "name": null,
+            "exact": false
+          },
+          {
+            "strategy": "placeholder",
+            "value": "Generate quarterly report",
+            "name": null,
+            "exact": false
+          },
+          {
+            "strategy": "test_id",
+            "value": "generate-quarterly-report",
+            "name": null,
+            "exact": false
+          },
+          {
+            "strategy": "role",
+            "value": "button",
+            "name": "Generate quarterly report",
+            "exact": false
+          },
+          {
+            "strategy": "text",
+            "value": "Generate quarterly report",
+            "name": null,
+            "exact": false
+          }
+        ],
+        "healed_at": null,
+        "heal_count": 0
+      },
+      "value": "readiness",
+      "narration_hint": "opening the readiness reports",
+      "risk": "safe",
+      "knowledge": {
+        "page_url": "http://localhost:8000/drone/vp/readiness",
+        "page_title": "Fleet readiness \u2014 SkyLoop",
+        "a11y_digest": "- banner:\n  - img\n  - text: SkyLoop Flight Academy Priya Raghavan Vice President, Flight Ops\n  - button \"Sign out\"\n- main:\n  - heading \"Fleet readiness & training outcomes\" [level=1]\n  - paragraph: Where the programme stands this quarter, and what goes in the board pack.\n  - text: Reporting quarter\n  - combobox \"Reporting quarter\":\n    - option \"2026-Q1\"\n    - option \"2026-Q2\" [selected]\n    - option \"2026-Q3\"\n  - button \"Generate quarterly report\"\n  - text: Read-only. Nothing here changes fleet or training records. 60% Fleet ready to fly 47 Pilots certified 104% of target 45 1.37 Incidents / 1k flight hours 2 across 1465 h $132 Cost per flight hour 72 in pipeline\n  - heading \"Airframe availability\" [level=2]\n  - table:\n    - rowgroup:\n      - row \"Tail Model Hours Battery Status\":\n        - columnheader \"Tail\"\n        - columnheader \"Model\"\n        - columnheader \"Hours\"\n        - columnheader \"Battery\"\n        - columnheader \"Status\"\n    - rowgroup:\n      - row \"X4-01 SkyLoop X4 412 91% ready\":\n        - cell \"X4-01\"\n        - cell \"SkyLoop X4\"\n        - cell \"412\"\n        - cell \"91%\"\n        - cell \"ready\"\n      - row \"X4-02 SkyLoop X4 388 74% ready\":\n        - cell \"X4-02\"\n        - cell \"SkyLoop X4\"\n        - cell \"388\"\n        - cell \"74%\"\n        - cell \"ready\"\n      - row \"X4-03 SkyLoop X4 967 52% maintenance\":\n        - cell \"X4-03\"\n        - cell \"SkyLoop X4\"\n        - cell \"967\"\n        - cell \"52%\"\n        - cell \"maintenance\"\n      - row \"H2-07 SkyLoop Heavy 2 145 96% ready\":\n        - cell \"H2-07\"\n        - cell \"SkyLoop Heavy 2\"\n        - cell \"145\"\n        - cell \"96%\"\n        - cell \"ready\"\n      - row \"H2-08 SkyLoop Heavy 2 201 88% grounded\":\n        - cell \"H2-08\"\n        - cell \"SkyLoop Heavy 2\"\n        - cell \"201\"\n        - cell \"88%\"\n        - cell \"grounded\"\n  - heading \"Quarterly report\" [level=2]\n  - text: 2026-Q2 \u00b7 generated 2026-08-19T15:40:43+00:00\n  - list:\n    - listitem: \"2026-Q2: 47 pilots certified against a target of 45.\"\n    - listitem: Fleet availability 60% (3 of 5 airframes ready).\n    - listitem: 2 incidents across 1465 flight hours.\n    - listitem: Cost per flight hour $132, training pipeline 72 enrolled.",
+        "visible_text": "SkyLoop Flight Academy\nPriya Raghavan\nVice President, Flight Ops\nSign out\nFleet readiness & training outcomes\n\nWhere the programme stands this quarter, and what goes in the board pack.\n\nReporting quarter\n2026-Q1\n2026-Q2\n2026-Q3\nGenerate quarterly report\nRead-only. Nothing here changes fleet or training records.\n60%\nFleet ready to fly\n47\nPilots certified\n104% of target 45\n1.37\nIncidents / 1k flight hours\n2 across 1465 h\n$132\nCost per flight hour\n72 in pipeline\nAIRFRAME AVAILABILITY\nTAIL\tMODEL\tHOURS\tBATTERY\tSTATUS\nX4-01\tSkyLoop X4\t412\t91%\tready\nX4-02\tSkyLoop X4\t388\t74%\tready\nX4-03\tSkyLoop X4\t967\t52%\tmaintenance\nH2-07\tSkyLoop Heavy 2\t145\t96%\tready\nH2-08\tSkyLoop Heavy 2\t201\t88%\tgrounded\nQUARTERLY REPORT\n2026-Q2 \u00b7 generated 2026-08-19T15:40:43+00:00\n2026-Q2: 47 pilots certified against a target of 45.\nFleet availability 60% (3 of 5 airframes ready).\n2 incidents across 1465 flight hours.\nCost per flight hour $132, training pipeline 72 enrolled.",
+        "screenshot_path": null,
+        "observed_effect": "new content appeared on the page",
+        "captured_at": "2026-08-19T15:40:43.570593Z"
+      },
+      "timeout_ms": 8000
+    },
+    {
+      "id": "6-open-the-quarterly-report",
+      "index": 5,
+      "action": "click",
+      "intent": "open the quarterly report",
+      "locator": {
+        "intent": "open the quarterly report",
+        "candidates": [
+          {
+            "strategy": "text",
+            "value": "2026-Q2 \u00b7",
+            "name": null,
+            "exact": false
+          },
+          {
+            "strategy": "css",
+            "value": "button[disabled=false][contains(text(),'Report')]",
+            "name": null,
+            "exact": false
+          },
+          {
+            "strategy": "label",
+            "value": "open the quarterly report",
+            "name": null,
+            "exact": false
+          },
+          {
+            "strategy": "placeholder",
+            "value": "open the quarterly report",
+            "name": null,
+            "exact": false
+          },
+          {
+            "strategy": "test_id",
+            "value": "open-the-quarterly-report",
+            "name": null,
+            "exact": false
+          },
+          {
+            "strategy": "role",
+            "value": "button",
+            "name": "open the quarterly report",
+            "exact": false
+          },
+          {
+            "strategy": "text",
+            "value": "open the quarterly report",
+            "name": null,
+            "exact": false
+          }
+        ],
+        "healed_at": "2026-08-19T15:41:20.354522Z",
+        "heal_count": 1
+      },
+      "value": "quarterly",
+      "narration_hint": "clicking on the quarter reports",
+      "risk": "safe",
+      "knowledge": {
+        "page_url": "http://localhost:8000/drone/vp/readiness",
+        "page_title": "Fleet readiness \u2014 SkyLoop",
+        "a11y_digest": "- banner:\n  - img\n  - text: SkyLoop Flight Academy Priya Raghavan Vice President, Flight Ops\n  - button \"Sign out\"\n- main:\n  - heading \"Fleet readiness & training outcomes\" [level=1]\n  - paragraph: Where the programme stands this quarter, and what goes in the board pack.\n  - text: Reporting quarter\n  - combobox \"Reporting quarter\":\n    - option \"2026-Q1\"\n    - option \"2026-Q2\" [selected]\n    - option \"2026-Q3\"\n  - button \"Generate quarterly report\"\n  - text: Read-only. Nothing here changes fleet or training records. 60% Fleet ready to fly 47 Pilots certified 104% of target 45 1.37 Incidents / 1k flight hours 2 across 1465 h $132 Cost per flight hour 72 in pipeline\n  - heading \"Airframe availability\" [level=2]\n  - table:\n    - rowgroup:\n      - row \"Tail Model Hours Battery Status\":\n        - columnheader \"Tail\"\n        - columnheader \"Model\"\n        - columnheader \"Hours\"\n        - columnheader \"Battery\"\n        - columnheader \"Status\"\n    - rowgroup:\n      - row \"X4-01 SkyLoop X4 412 91% ready\":\n        - cell \"X4-01\"\n        - cell \"SkyLoop X4\"\n        - cell \"412\"\n        - cell \"91%\"\n        - cell \"ready\"\n      - row \"X4-02 SkyLoop X4 388 74% ready\":\n        - cell \"X4-02\"\n        - cell \"SkyLoop X4\"\n        - cell \"388\"\n        - cell \"74%\"\n        - cell \"ready\"\n      - row \"X4-03 SkyLoop X4 967 52% maintenance\":\n        - cell \"X4-03\"\n        - cell \"SkyLoop X4\"\n        - cell \"967\"\n        - cell \"52%\"\n        - cell \"maintenance\"\n      - row \"H2-07 SkyLoop Heavy 2 145 96% ready\":\n        - cell \"H2-07\"\n        - cell \"SkyLoop Heavy 2\"\n        - cell \"145\"\n        - cell \"96%\"\n        - cell \"ready\"\n      - row \"H2-08 SkyLoop Heavy 2 201 88% grounded\":\n        - cell \"H2-08\"\n        - cell \"SkyLoop Heavy 2\"\n        - cell \"201\"\n        - cell \"88%\"\n        - cell \"grounded\"\n  - heading \"Quarterly report\" [level=2]\n  - text: 2026-Q2 \u00b7 generated 2026-08-19T15:40:43+00:00\n  - list:\n    - listitem: \"2026-Q2: 47 pilots certified against a target of 45.\"\n    - listitem: Fleet availability 60% (3 of 5 airframes ready).\n    - listitem: 2 incidents across 1465 flight hours.\n    - listitem: Cost per flight hour $132, training pipeline 72 enrolled.",
+        "visible_text": "SkyLoop Flight Academy\nPriya Raghavan\nVice President, Flight Ops\nSign out\nFleet readiness & training outcomes\n\nWhere the programme stands this quarter, and what goes in the board pack.\n\nReporting quarter\n2026-Q1\n2026-Q2\n2026-Q3\nGenerate quarterly report\nRead-only. Nothing here changes fleet or training records.\n60%\nFleet ready to fly\n47\nPilots certified\n104% of target 45\n1.37\nIncidents / 1k flight hours\n2 across 1465 h\n$132\nCost per flight hour\n72 in pipeline\nAIRFRAME AVAILABILITY\nTAIL\tMODEL\tHOURS\tBATTERY\tSTATUS\nX4-01\tSkyLoop X4\t412\t91%\tready\nX4-02\tSkyLoop X4\t388\t74%\tready\nX4-03\tSkyLoop X4\t967\t52%\tmaintenance\nH2-07\tSkyLoop Heavy 2\t145\t96%\tready\nH2-08\tSkyLoop Heavy 2\t201\t88%\tgrounded\nQUARTERLY REPORT\n2026-Q2 \u00b7 generated 2026-08-19T15:40:43+00:00\n2026-Q2: 47 pilots certified against a target of 45.\nFleet availability 60% (3 of 5 airframes ready).\n2 incidents across 1465 flight hours.\nCost per flight hour $132, training pipeline 72 enrolled.",
+        "screenshot_path": null,
+        "observed_effect": "open the quarterly report went through",
+        "captured_at": "2026-08-19T15:41:20.930567Z"
+      },
+      "timeout_ms": 8000
+    }
+  ],
+  "taught_at": "2026-08-19T15:41:20.931804Z",
+  "rehearsal_passed": true,
+  "source_utterance": "Sign in as vp@skyloop.io with password flightdemo, then generate the quarterly report on the readiness page."
+}

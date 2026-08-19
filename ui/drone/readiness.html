@@ -1,0 +1,66 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Fleet readiness — SkyLoop</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><text y='14' font-size='14'>🚁</text></svg>">
+<link rel="stylesheet" href="/drone-static/skyloop.css">
+</head><body>
+<header class="topbar"></header>
+<main>
+  <h1>Fleet readiness &amp; training outcomes</h1>
+  <p class="sub">Where the programme stands this quarter, and what goes in the board pack.</p>
+
+  <div class="card" style="margin-bottom:16px;display:flex;align-items:end;gap:14px;flex-wrap:wrap">
+    <div style="flex:0 0 190px"><label for="quarter">Reporting quarter</label>
+      <select id="quarter" data-testid="quarter"></select></div>
+    <button data-testid="generate-report">Generate quarterly report</button>
+    <span class="note" style="margin:0">Read-only. Nothing here changes fleet or training records.</span>
+  </div>
+
+  <div class="grid cols-4" data-testid="kpis"></div>
+
+  <div class="grid cols-2" style="margin-top:16px">
+    <div class="card"><h2>Airframe availability</h2>
+      <table><thead><tr><th>Tail</th><th>Model</th><th>Hours</th><th>Battery</th><th>Status</th></tr></thead>
+      <tbody id="fleet" data-testid="fleet-rows"></tbody></table></div>
+    <div class="card"><h2>Quarterly report</h2>
+      <div id="report" data-testid="report-body" class="note">
+        No report generated yet. Pick a quarter and press <b>Generate quarterly report</b>.</div></div>
+  </div>
+</main>
+<script src="/drone-static/_shell.js"></script>
+<script>
+shell();
+const pill = s => s === 'ready' ? 'ok' : s === 'maintenance' ? 'warn' : 'bad';
+async function load(quarter) {
+  const d = await getJSON('/drone/api/readiness' + (quarter ? '?quarter=' + quarter : ''));
+  const sel = document.getElementById('quarter');
+  if (!sel.options.length) {
+    sel.innerHTML = d.quarters.map(q => `<option${q === d.quarter ? ' selected' : ''}>${q}</option>`).join('');
+    sel.onchange = () => load(sel.value);
+  }
+  const tone = (v, good) => v >= good ? 'ok' : v >= good * 0.8 ? 'warn' : 'bad';
+  document.querySelector('[data-testid=kpis]').innerHTML = `
+    <div class="kpi"><div class="n">${d.fleet_ready_pct}%</div><div class="l">Fleet ready to fly</div>
+      <div class="bar"><span style="width:${d.fleet_ready_pct}%"></span></div></div>
+    <div class="kpi" data-testid="kpi-certified"><div class="n">${d.pilots_certified}</div>
+      <div class="l">Pilots certified</div>
+      <div class="d"><span class="pill ${tone(d.against_target_pct, 100)}">${d.against_target_pct}% of target ${d.target_certified}</span></div></div>
+    <div class="kpi"><div class="n">${d.incidents_per_1k_hours}</div>
+      <div class="l">Incidents / 1k flight hours</div>
+      <div class="d"><span class="pill ${d.incidents_per_1k_hours <= 2 ? 'ok' : 'warn'}">${d.incidents} across ${d.flight_hours} h</span></div></div>
+    <div class="kpi"><div class="n">$${d.cost_per_hour}</div><div class="l">Cost per flight hour</div>
+      <div class="d"><span class="pill info">${d.pilots_enrolled} in pipeline</span></div></div>`;
+  document.getElementById('fleet').innerHTML = d.fleet.map(a => `<tr>
+    <td>${a.tail}</td><td>${a.model}</td><td>${a.hours}</td>
+    <td>${Math.round(a.battery_health * 100)}%</td>
+    <td><span class="pill ${pill(a.status)}">${a.status}</span></td></tr>`).join('');
+}
+document.querySelector('[data-testid=generate-report]').onclick = async () => {
+  const r = await postJSON('/drone/api/report', {quarter: document.getElementById('quarter').value});
+  document.getElementById('report').innerHTML =
+    `<div class="pill info" style="margin-bottom:10px">${r.quarter} · generated ${r.generated}</div>
+     <ul style="margin:0;padding-left:18px">${r.summary.map(l => `<li>${l}</li>`).join('')}</ul>`;
+};
+load();
+</script>
+</body></html>

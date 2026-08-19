@@ -4,12 +4,18 @@ from __future__ import annotations
 
 import asyncio
 import json
+import os
 from typing import Any, Awaitable, Callable
 
 from app.llm import complete
+from app.retrieve import Chunk, split, top_k
 from app.schemas import Answer, PageSnapshot, WorkflowSpec
 
-ANSWER_TIMEOUT_S = 4.0
+# A local model answers in tens of seconds, not the four a hosted one takes.
+ANSWER_TIMEOUT_S = float(os.getenv("WA_ANSWER_TIMEOUT", "4"))
+# How many evidence chunks reach the prompt. Small on purpose: a short prompt of
+# relevant pages beats every page the walkthrough ever saw.
+EVIDENCE_CHUNKS = int(os.getenv("WA_EVIDENCE_CHUNKS", "6"))
 FALLBACK = "That request is out of scope for this demo and wasn't part of what I was shown, so I can't say."
 
 
@@ -20,35 +26,33 @@ class QA:
         self._llm = llm or complete
 
     async def answer(self, question: str, spec: WorkflowSpec, cursor: int, live: PageSnapshot) -> Answer:
-        evidence: list[dict[str, str]] = []
+        corpus: list[Chunk] = []
         valid_sources = {"live_page"}
         for step in spec.steps:
             if step.knowledge is None:
                 continue
             valid_sources.add(step.id)
-            evidence.append({
-                "step_id": step.id,
-                "page_title": step.knowledge.page_title,
-                "visible_text": step.knowledge.visible_text,
-                "observed_effect": step.knowledge.observed_effect,
-            })
-        live_evidence = {
-            "page_title": live.title,
-            "visible_text": live.visible_text,
-            "a11y_digest": live.a11y_digest,
-        }
+            header = f"{step.knowledge.page_title}\nwhat happened: {step.knowledge.observed_effect}"
+            corpus += split(step.id, f"{header}\n{step.knowledge.visible_text}")
+        corpus += split("live_page", f"{live.title}\n{live.visible_text}\n{live.a11y_digest}")
+        retrieved = top_k(question, corpus, EVIDENCE_CHUNKS)
+        evidence = [{"source": chunk.source, "text": chunk.text} for chunk in retrieved]
+        if not evidence:
+            # Nothing on any page the walkthrough saw shares a word with the
+            # question, so there is nothing to be grounded in.
+            return Answer(text=FALLBACK, grounded=False, sources=[])
         system = """Answer a walkthrough customer's question using only the supplied evidence.
 Do not use world knowledge or infer unstated facts. If the answer is not explicitly
 supported, say it is outside the scope of this demo, that you were not shown it, and
 that you cannot say. Return JSON only:
 text (spoken, no markdown, at most 500 characters), grounded (boolean), sources
-(an array containing only supplied step ids and/or live_page). A grounded answer
-must cite at least one source."""
+(an array containing only the source values supplied in evidence). A grounded answer
+must cite at least one source. The evidence is only the part of the walkthrough
+relevant to this question; anything not in it, you were not shown."""
         user = json.dumps({
             "question": question,
             "current_cursor": cursor,
-            "step_knowledge": evidence,
-            "live_page": live_evidence,
+            "evidence": evidence,
         })
         schema = {
             "type": "object",

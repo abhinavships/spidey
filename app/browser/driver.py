@@ -12,6 +12,7 @@ Usage:
 from __future__ import annotations
 
 import asyncio
+import os
 from datetime import datetime, timezone
 from typing import Any
 
@@ -69,8 +70,12 @@ class Driver:
             self._attached = True
             log.info("cdp_attached", url=self._page.url)
         else:
-            self._browser = await self._pw.chromium.launch(headless=False)
-            self._context = await self._browser.new_context(storage_state=storage_state)
+            # Headless by default: the walkthrough is watched through the live
+            # preview in the app, not through a Chrome window on the desktop.
+            headless = os.getenv("WA_HEADLESS", "1") != "0"
+            self._browser = await self._pw.chromium.launch(headless=headless)
+            self._context = await self._browser.new_context(
+                storage_state=storage_state, viewport={"width": 1280, "height": 800})
             self._page = await self._context.new_page()
             self._attached = False
             if entry_url:

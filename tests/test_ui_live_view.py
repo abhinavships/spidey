@@ -9,7 +9,7 @@ SERVER = Path(__file__).resolve().parents[1] / "app" / "server.py"
 
 def test_ui_renders_live_browser_frame_events():
     page = UI.read_text(encoding="utf-8")
-    assert 'id="browser-frame"' in page
+    assert 'id="frame"' in page
     assert "case 'frame'" in page
     assert "ev.data.src" in page
 

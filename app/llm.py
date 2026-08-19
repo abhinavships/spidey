@@ -1,6 +1,7 @@
 """app/llm.py — the single model entry point.
 
-Uses Groq when ``GROQ_API_KEY`` is configured, then Gemini when
+Uses a local OpenAI-compatible server when ``WA_LOCAL_MODEL`` is configured
+(Ollama, llama.cpp, LM Studio), then Groq when ``GROQ_API_KEY`` is set, then Gemini when
 ``GEMINI_API_KEY`` is configured, otherwise Claude when ``ANTHROPIC_API_KEY``
 is configured. All paths return ``None`` rather than raising so a live
 walkthrough can fall back safely.
@@ -23,6 +24,10 @@ MODEL = os.getenv("WA_MODEL", "claude-sonnet-4-6")
 GEMINI_MODEL = os.getenv("WA_GEMINI_MODEL", "gemini-flash-latest")
 GROQ_MODEL = os.getenv("WA_GROQ_MODEL", "llama-3.3-70b-versatile")
 TIMEOUT_S = float(os.getenv("WA_LLM_TIMEOUT", "6"))
+# A local model loads weights on first call and decodes far slower than a
+# hosted one, so it gets its own, much longer budget.
+LOCAL_BASE = os.getenv("WA_LOCAL_BASE", "http://localhost:11434/v1")
+LOCAL_TIMEOUT_S = float(os.getenv("WA_LOCAL_TIMEOUT", "120"))
 
 # Groq fronts its API with Cloudflare, which blocks Python's default
 # urllib User-Agent as a bot signature (HTTP 403, error code 1010).
@@ -32,7 +37,7 @@ _BROWSER_UA = ("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.
 
 def available() -> bool:
     """True when any configured model provider can be called."""
-    return bool(os.getenv("GROQ_API_KEY") or os.getenv("GEMINI_API_KEY") or os.getenv("ANTHROPIC_API_KEY"))
+    return bool(os.getenv("WA_LOCAL_MODEL") or os.getenv("GROQ_API_KEY") or os.getenv("GEMINI_API_KEY") or os.getenv("ANTHROPIC_API_KEY"))
 
 
 def _strip_fences(text: str) -> str:
@@ -43,18 +48,20 @@ def _strip_fences(text: str) -> str:
     return t.strip()
 
 
-def _groq_request(system: str, user: str, json_schema: dict | None,
-                  max_tokens: int, key: str) -> Any:
-    """Make one Groq (OpenAI-compatible) chat completion request; called in a worker thread."""
+def _openai_request(system: str, user: str, json_schema: dict | None, max_tokens: int,
+                    key: str, base: str, model: str, timeout: float,
+                    extra: dict[str, Any] | None = None) -> Any:
+    """Make one OpenAI-compatible chat completion request; called in a worker thread."""
     body: dict[str, Any] = {
-        "model": os.getenv("WA_GROQ_MODEL", GROQ_MODEL),
+        "model": model,
         "messages": [{"role": "system", "content": system}, {"role": "user", "content": user}],
         "max_tokens": max_tokens,
+        **(extra or {}),
     }
-    if json_schema:
+    if json_schema and "response_format" not in body:
         body["response_format"] = {"type": "json_object"}
     request = urllib.request.Request(
-        "https://api.groq.com/openai/v1/chat/completions",
+        base.rstrip("/") + "/chat/completions",
         data=json.dumps(body).encode("utf-8"),
         headers={
             "Content-Type": "application/json",
@@ -63,27 +70,29 @@ def _groq_request(system: str, user: str, json_schema: dict | None,
         },
         method="POST",
     )
-    with urllib.request.urlopen(request, timeout=TIMEOUT_S) as response:  # noqa: S310 - fixed Groq endpoint
+    with urllib.request.urlopen(request, timeout=timeout) as response:  # noqa: S310 - operator-configured endpoint
         payload = json.loads(response.read().decode("utf-8"))
     text = payload.get("choices", [{}])[0].get("message", {}).get("content", "")
     if not text:
-        log.warning("groq_empty_text", finish_reason=payload.get("choices", [{}])[0].get("finish_reason"))
+        log.warning("openai_empty_text", finish_reason=payload.get("choices", [{}])[0].get("finish_reason"))
         return None
     return json.loads(_strip_fences(text)) if json_schema else text
 
 
-async def _complete_groq(system: str, user: str, json_schema: dict | None,
-                         max_tokens: int, key: str) -> Any:
+async def _complete_openai(system: str, user: str, json_schema: dict | None, max_tokens: int,
+                           key: str, base: str, model: str, timeout: float,
+                           extra: dict[str, Any] | None = None) -> Any:
     last: Exception | None = None
     for attempt in (1, 2):
         try:
-            return await asyncio.to_thread(_groq_request, system, user, json_schema, max_tokens, key)
+            return await asyncio.to_thread(_openai_request, system, user, json_schema,
+                                           max_tokens, key, base, model, timeout, extra)
         except Exception as exc:  # noqa: BLE001 - provider boundary must not stop the demo
             last = exc
-            log.warning("groq_call_failed", attempt=attempt, error=str(exc))
+            log.warning("openai_call_failed", attempt=attempt, base=base, error=str(exc))
             if attempt == 1:
                 await asyncio.sleep(1)
-    log.error("groq_gave_up", error=str(last))
+    log.error("openai_gave_up", base=base, error=str(last))
     return None
 
 
@@ -142,14 +151,38 @@ async def _complete_gemini(system: str, user: str, json_schema: dict | None,
 
 async def complete(system: str, user: str, json_schema: dict | None = None,
                    max_tokens: int = 1024) -> Any:
-    """Call Groq, Gemini, or Claude once, returning text/dict or ``None`` on failure.
+    """Call the first configured provider once, returning text/dict or ``None`` on failure.
 
-    Groq is tried first when configured, then Gemini, then Claude, allowing a
-    no-cost demo without changing any caller.
+    Order is local server, Groq, Gemini, Claude — so setting ``WA_LOCAL_MODEL``
+    runs the whole demo with no API key and no network, without changing any caller.
     """
+    local_model = os.getenv("WA_LOCAL_MODEL")
+    if local_model:
+        # Locally served models are often reasoning models, which spend the whole
+        # output budget on hidden thinking and return empty content. These calls
+        # are short structured replies, so turn thinking off (Ollama maps
+        # reasoning_effort onto its own think flag).
+        effort = os.getenv("WA_LOCAL_REASONING", "none")
+        extra: dict[str, Any] = {"reasoning_effort": effort} if effort else {}
+        if json_schema:
+            # Grammar-constrained decoding: a local server can hold the decoder to
+            # the schema, so a small model cannot emit an invalid enum or a missing
+            # field. This is what makes teaching work on a 3B model at all.
+            extra["response_format"] = {
+                "type": "json_schema",
+                "json_schema": {"name": "reply", "schema": json_schema},
+            }
+        return await _complete_openai(system, user, json_schema, max_tokens,
+                                      os.getenv("WA_LOCAL_KEY", "local"),
+                                      os.getenv("WA_LOCAL_BASE", LOCAL_BASE), local_model,
+                                      float(os.getenv("WA_LOCAL_TIMEOUT", LOCAL_TIMEOUT_S)),
+                                      extra or None)
+
     groq_key = os.getenv("GROQ_API_KEY")
     if groq_key:
-        return await _complete_groq(system, user, json_schema, max_tokens, groq_key)
+        return await _complete_openai(system, user, json_schema, max_tokens, groq_key,
+                                      "https://api.groq.com/openai/v1",
+                                      os.getenv("WA_GROQ_MODEL", GROQ_MODEL), TIMEOUT_S)
 
     gemini_key = os.getenv("GEMINI_API_KEY")
     if gemini_key:
