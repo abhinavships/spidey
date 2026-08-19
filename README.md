@@ -3,7 +3,7 @@
 # 🚁 Live Walkthrough Agent
 
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue)](https://www.python.org/)
-[![Tests](https://img.shields.io/badge/tests-98%20passing-brightgreen)](#testing)
+[![Tests](https://img.shields.io/badge/tests-99%20passing-brightgreen)](#testing)
 [![Runs locally](https://img.shields.io/badge/LLM-local%20%7C%20no%20API%20key-8b5cf6)](#it-runs-on-your-laptop)
 [![Status](https://img.shields.io/badge/status-demo%20build-orange)](#status)
 
@@ -177,7 +177,7 @@ No embeddings, no vector store: the corpus is six short page captures, and stdli
 .venv/bin/python -m pytest
 ```
 
-**98 tests**, all local fakes — no real browser, no real model, no network. The two `test_llm_*.py` files stub `urlopen` directly.
+**99 tests**, all local fakes — no real browser, no real model, no network. The two `test_llm_*.py` files stub `urlopen` directly.
 
 ## Configuration
 

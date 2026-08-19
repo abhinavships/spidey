@@ -270,3 +270,23 @@ async def test_qa_declines_when_nothing_retrieved_matches_the_question():
 
     assert not called
     assert not answer.grounded
+
+
+async def test_qa_can_answer_from_the_plan_before_any_step_is_rehearsed():
+    """A hand-written spec has no captured knowledge; the plan is still evidence."""
+    import json as _json
+
+    seen = {}
+
+    async def spy(system, user, json_schema=None, max_tokens=0):
+        seen["user"] = _json.loads(user)
+        return {"text": "Next I save the mission draft.", "grounded": True,
+                "sources": ["workflow_plan"]}
+
+    spec = make_spec(3)
+    spec = spec.model_copy(update={  # a hand-written spec, never rehearsed
+        "steps": [step.model_copy(update={"knowledge": None}) for step in spec.steps]})
+    answer = await QA(llm=spy).answer("what step are you on", spec, 1, make_snapshot())
+
+    assert "workflow_plan" in {chunk["source"] for chunk in seen["user"]["evidence"]}
+    assert answer.grounded

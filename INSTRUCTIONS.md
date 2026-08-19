@@ -70,7 +70,7 @@ instead and leave `WA_LOCAL_MODEL` empty.
 .venv/bin/python -m pytest
 ```
 
-Expect **98 passed**. If not, stop and fix that first — nothing downstream works otherwise.
+Expect **99 passed**. If not, stop and fix that first — nothing downstream works otherwise.
 
 ---
 

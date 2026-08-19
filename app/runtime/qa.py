@@ -16,6 +16,9 @@ ANSWER_TIMEOUT_S = float(os.getenv("WA_ANSWER_TIMEOUT", "4"))
 # How many evidence chunks reach the prompt. Small on purpose: a short prompt of
 # relevant pages beats every page the walkthrough ever saw.
 EVIDENCE_CHUNKS = int(os.getenv("WA_EVIDENCE_CHUNKS", "6"))
+# The plan competes with the page for room, and the page is what most questions
+# are actually about, so the plan gets its own small budget instead of the pool.
+PLAN_CHUNKS = int(os.getenv("WA_PLAN_CHUNKS", "2"))
 FALLBACK = "That request is out of scope for this demo and wasn't part of what I was shown, so I can't say."
 
 
@@ -27,7 +30,13 @@ class QA:
 
     async def answer(self, question: str, spec: WorkflowSpec, cursor: int, live: PageSnapshot) -> Answer:
         corpus: list[Chunk] = []
-        valid_sources = {"live_page"}
+        valid_sources = {"live_page", "workflow_plan"}
+        # The plan itself is evidence: without it, "what are you about to do?" has
+        # nothing to be grounded in until a step has already been rehearsed.
+        plan = split("workflow_plan", "\n".join(
+            f"step {position + 1} of {len(spec.steps)}: {step.intent}"
+            f"{' (current step)' if position == cursor else ''}"
+            for position, step in enumerate(spec.steps)))
         for step in spec.steps:
             if step.knowledge is None:
                 continue
@@ -35,7 +44,7 @@ class QA:
             header = f"{step.knowledge.page_title}\nwhat happened: {step.knowledge.observed_effect}"
             corpus += split(step.id, f"{header}\n{step.knowledge.visible_text}")
         corpus += split("live_page", f"{live.title}\n{live.visible_text}\n{live.a11y_digest}")
-        retrieved = top_k(question, corpus, EVIDENCE_CHUNKS)
+        retrieved = top_k(question, corpus, EVIDENCE_CHUNKS) + top_k(question, plan, PLAN_CHUNKS)
         evidence = [{"source": chunk.source, "text": chunk.text} for chunk in retrieved]
         if not evidence:
             # Nothing on any page the walkthrough saw shares a word with the

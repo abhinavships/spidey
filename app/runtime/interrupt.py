@@ -4,12 +4,16 @@ from __future__ import annotations
 
 import asyncio
 import json
+import os
 from typing import Any, Awaitable, Callable
 
 from app.llm import complete
 from app.schemas import InterruptDecision, InterruptKind, WorkflowSpec
 
-CLASSIFY_TIMEOUT_S = 4.0
+# A locally served model answers in seconds, not milliseconds. Timing out here is
+# indistinguishable to the customer from the agent refusing to answer, so the
+# budget has to cover a real local call.
+CLASSIFY_TIMEOUT_S = float(os.getenv("WA_CLASSIFY_TIMEOUT", "20"))
 
 
 def _unclear(rationale: str) -> InterruptDecision:
@@ -51,7 +55,9 @@ there is not enough information. rationale must be brief and non-empty."""
         schema = {
             "type": "object",
             "properties": {
-                "kind": {"type": "string"},
+                # Spelling the kinds out lets a constrained decoder hold a small
+                # model to one of them instead of inventing a label.
+                "kind": {"type": "string", "enum": [k.value for k in InterruptKind]},
                 "target_step_index": {"type": ["integer", "null"]},
                 "rationale": {"type": "string"},
             },
@@ -63,6 +69,8 @@ there is not enough information. rationale must be brief and non-empty."""
                 raw = json.loads(raw)
             if not isinstance(raw, dict):
                 return _unclear("The classifier returned no usable decision.")
+            if isinstance(raw.get("kind"), str):  # models capitalise; the enum does not
+                raw["kind"] = raw["kind"].strip().lower()
             decision = InterruptDecision.model_validate(raw)
         except Exception:  # classification is a non-fatal live-loop boundary
             return _unclear("I could not classify that request.")
