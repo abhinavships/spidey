@@ -1,11 +1,14 @@
-"""app/browser/resolver.py — M2, Demo 1 scope.
+"""app/browser/resolver.py — turning a description of an element into locators.
 
-`heal()` asks the model for a fresh locator when the saved ones miss. With no
-API key it returns None and the step simply fails — the saved-locator path is
-what Demo 1 is proving. Hermes replaces this file at Demo 3.
+``resolve()`` is what teaching leans on: a human says "the Work email field" and
+this has to become something Playwright can click. The model is asked first, but
+its answer is only ever the *first* candidate — plain-language guesses derived
+from the words themselves follow it, so a step can still resolve when the model
+is small, slow, or absent.
 
 Usage:
     resolver = Resolver()
+    bundle = await resolver.resolve("the Work email field", snap)
     fresh = await resolver.heal(step.locator, snap)
 """
 
@@ -22,11 +25,62 @@ _ALLOWED = {"role", "test_id", "label", "placeholder", "text", "css"}
 
 SYSTEM = (
     "You find web elements. Given an accessibility tree and a description of a "
-    "target element, reply with JSON: "
-    '{"strategy": one of role|test_id|label|placeholder|text|css, '
-    '"value": string, "name": string or null, "exact": bool}. '
-    "Prefer test_id, then role. Never invent an element that is not in the tree."
+    "target element, reply with the locator that finds it. Prefer test_id, then "
+    "role, then label. Never invent an element that is not in the tree."
 )
+
+# Sent to the model so a constrained decoder cannot return an unusable strategy.
+LOCATOR_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "strategy": {"type": "string", "enum": sorted(_ALLOWED)},
+        "value": {"type": "string"},
+        "name": {"type": ["string", "null"]},
+        "exact": {"type": "boolean"},
+    },
+    "required": ["strategy", "value"],
+}
+
+# Words people attach to an element when describing it, which are never part of
+# its accessible name: "the Work email field" is looking for "Work email".
+_NOISE = ("the ", "a ", "an ")
+_TRAILING = (" field", " button", " box", " input", " link", " dropdown",
+             " checkbox", " menu", " icon", " option", " tab")
+
+
+def _bare(intent: str) -> str:
+    """The element's likely visible name, stripped of describing words."""
+    text = intent.strip().strip('"\'')
+    lowered = text.lower()
+    for prefix in _NOISE:
+        if lowered.startswith(prefix):
+            text = text[len(prefix):]
+            lowered = text.lower()
+            break
+    for suffix in _TRAILING:
+        if lowered.endswith(suffix):
+            text = text[: -len(suffix)]
+            break
+    return text.strip()
+
+
+def _guesses(intent: str) -> list[Locator]:
+    """Deterministic candidates from the wording alone, best first.
+
+    Usage:
+        _guesses("the Work email field")  # -> label/placeholder/text "Work email"
+    """
+    name = _bare(intent)
+    if not name:
+        return [Locator(strategy="text", value=intent)]
+    slug = name.lower().replace(" ", "-")
+    return [
+        Locator(strategy="label", value=name),
+        Locator(strategy="placeholder", value=name),
+        Locator(strategy="test_id", value=slug),
+        Locator(strategy="role", value="button", name=name),
+        Locator(strategy="text", value=name),
+    ]
 
 
 class Resolver:
@@ -38,8 +92,9 @@ class Resolver:
         Usage:
             bundle = await resolver.resolve("the New issue button", snap)
         """
-        healed = await self._ask(intent, snap)
-        candidates = [healed] if healed else [Locator(strategy="text", value=intent)]
+        asked = await self._ask(intent, snap)
+        guesses = _guesses(intent)
+        candidates = [asked, *guesses] if asked else guesses
         return LocatorBundle(intent=intent, candidates=candidates)
 
     async def heal(self, bundle: LocatorBundle, snap: PageSnapshot) -> LocatorBundle | None:
@@ -59,7 +114,7 @@ class Resolver:
         user = (f"Page: {snap.title} ({snap.url})\n\n"
                 f"Accessibility tree:\n{snap.a11y_digest[:3000]}\n\n"
                 f"Target element: {intent}")
-        out = await complete(SYSTEM, user, json_schema={"type": "object"}, max_tokens=300)
+        out = await complete(SYSTEM, user, json_schema=LOCATOR_SCHEMA, max_tokens=300)
         if not isinstance(out, dict):
             return None
         strategy, value = out.get("strategy"), out.get("value")

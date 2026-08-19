@@ -1,0 +1,217 @@
+{
+  "id": "vp-quarterly-report",
+  "version": 1,
+  "title": "Pull the quarterly readiness report",
+  "description": "Sign in as the vice president, switch to Q3, and generate the quarterly outcome summary.",
+  "target_domain": "localhost",
+  "entry_url": "http://localhost:8000/drone/login",
+  "steps": [
+    {
+      "id": "open-login",
+      "index": 0,
+      "action": "navigate",
+      "intent": "open the SkyLoop sign-in page",
+      "locator": null,
+      "value": "http://localhost:8000/drone/login",
+      "narration_hint": "opening SkyLoop",
+      "risk": "safe",
+      "knowledge": null,
+      "timeout_ms": 8000
+    },
+    {
+      "id": "type-email",
+      "index": 1,
+      "action": "type",
+      "intent": "type the vice president email address",
+      "locator": {
+        "intent": "the work email field",
+        "candidates": [
+          {
+            "strategy": "test_id",
+            "value": "email",
+            "name": null,
+            "exact": false
+          }
+        ],
+        "healed_at": null,
+        "heal_count": 0
+      },
+      "value": "vp@skyloop.io",
+      "narration_hint": "signing in as the vice president",
+      "risk": "caution",
+      "knowledge": null,
+      "timeout_ms": 8000
+    },
+    {
+      "id": "type-password",
+      "index": 2,
+      "action": "type",
+      "intent": "type the account password",
+      "locator": {
+        "intent": "the password field",
+        "candidates": [
+          {
+            "strategy": "test_id",
+            "value": "password",
+            "name": null,
+            "exact": false
+          }
+        ],
+        "healed_at": null,
+        "heal_count": 0
+      },
+      "value": "flightdemo",
+      "narration_hint": "entering the password",
+      "risk": "caution",
+      "knowledge": null,
+      "timeout_ms": 8000
+    },
+    {
+      "id": "click-signin",
+      "index": 3,
+      "action": "click",
+      "intent": "click Sign in",
+      "locator": {
+        "intent": "the Sign in button",
+        "candidates": [
+          {
+            "strategy": "test_id",
+            "value": "sign-in",
+            "name": null,
+            "exact": false
+          },
+          {
+            "strategy": "role",
+            "value": "button",
+            "name": "Sign in",
+            "exact": false
+          },
+          {
+            "strategy": "text",
+            "value": "Sign in",
+            "name": null,
+            "exact": false
+          }
+        ],
+        "healed_at": null,
+        "heal_count": 0
+      },
+      "value": null,
+      "narration_hint": "signing in",
+      "risk": "caution",
+      "knowledge": null,
+      "timeout_ms": 8000
+    },
+    {
+      "id": "pick-quarter",
+      "index": 4,
+      "action": "select",
+      "intent": "choose the 2026-Q3 reporting quarter",
+      "locator": {
+        "intent": "the reporting quarter dropdown",
+        "candidates": [
+          {
+            "strategy": "test_id",
+            "value": "quarter",
+            "name": null,
+            "exact": false
+          }
+        ],
+        "healed_at": null,
+        "heal_count": 0
+      },
+      "value": "2026-Q3",
+      "narration_hint": "switching to Q3",
+      "risk": "safe",
+      "knowledge": null,
+      "timeout_ms": 8000
+    },
+    {
+      "id": "read-kpis",
+      "index": 5,
+      "action": "assert",
+      "intent": "confirm the outcome tiles are on screen",
+      "locator": {
+        "intent": "the KPI tiles row",
+        "candidates": [
+          {
+            "strategy": "test_id",
+            "value": "kpis",
+            "name": null,
+            "exact": false
+          }
+        ],
+        "healed_at": null,
+        "heal_count": 0
+      },
+      "value": null,
+      "narration_hint": "reading the outcome tiles",
+      "risk": "safe",
+      "knowledge": null,
+      "timeout_ms": 8000
+    },
+    {
+      "id": "generate-report",
+      "index": 6,
+      "action": "click",
+      "intent": "generate the quarterly report",
+      "locator": {
+        "intent": "the Generate quarterly report button",
+        "candidates": [
+          {
+            "strategy": "test_id",
+            "value": "generate-report",
+            "name": null,
+            "exact": false
+          },
+          {
+            "strategy": "role",
+            "value": "button",
+            "name": "Generate quarterly report",
+            "exact": false
+          },
+          {
+            "strategy": "text",
+            "value": "Generate quarterly report",
+            "name": null,
+            "exact": false
+          }
+        ],
+        "healed_at": null,
+        "heal_count": 0
+      },
+      "value": null,
+      "narration_hint": "generating the report",
+      "risk": "caution",
+      "knowledge": null,
+      "timeout_ms": 8000
+    },
+    {
+      "id": "read-report",
+      "index": 7,
+      "action": "assert",
+      "intent": "confirm the quarterly summary appeared",
+      "locator": {
+        "intent": "the quarterly report panel",
+        "candidates": [
+          {
+            "strategy": "test_id",
+            "value": "report-body",
+            "name": null,
+            "exact": false
+          }
+        ],
+        "healed_at": null,
+        "heal_count": 0
+      },
+      "value": null,
+      "narration_hint": "reading the summary",
+      "risk": "safe",
+      "knowledge": null,
+      "timeout_ms": 8000
+    }
+  ],
+  "taught_at": "2026-08-19T12:55:10.769631+00:00",
+  "rehearsal_passed": true,
+  "source_utterance": "Sign in as the vice president, switch to Q3, and generate the quarterly outcome summary."
+}

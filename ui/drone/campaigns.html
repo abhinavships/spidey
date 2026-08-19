@@ -1,0 +1,71 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Course campaigns — SkyLoop</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><text y='14' font-size='14'>🚁</text></svg>">
+<link rel="stylesheet" href="/drone-static/skyloop.css">
+</head><body>
+<header class="topbar"></header>
+<main>
+  <h1>Course campaigns</h1>
+  <p class="sub">Draft an intake campaign for a training course. Drafts only — publishing goes through Ops.</p>
+
+  <div class="grid cols-2">
+    <div class="card">
+      <h2>New campaign</h2>
+      <div class="field"><label for="name">Campaign name</label>
+        <input id="name" data-testid="campaign-name" placeholder="e.g. Autumn intake — Commercial Ops"></div>
+      <div class="row">
+        <div class="field"><label for="course">Course</label><select id="course" data-testid="course"></select></div>
+        <div class="field"><label for="segment">Audience segment</label><select id="segment" data-testid="segment"></select></div>
+      </div>
+      <div class="field"><label>Channels</label>
+        <label class="check"><input type="checkbox" data-testid="channel-email" value="email"> Email</label>
+        <label class="check"><input type="checkbox" data-testid="channel-social" value="social"> Social</label>
+        <label class="check"><input type="checkbox" data-testid="channel-webinar" value="webinar"> Webinar invite</label>
+      </div>
+      <div class="field"><label for="send">Send on</label>
+        <input id="send" data-testid="send-on" type="date"></div>
+      <div class="field"><label for="headline">Headline</label>
+        <textarea id="headline" data-testid="headline" placeholder="Fly commercially in six weeks."></textarea></div>
+      <button data-testid="save-campaign">Save campaign draft</button>
+      <div id="result" data-testid="campaign-result" class="note"></div>
+    </div>
+
+    <div class="card"><h2>Campaigns</h2>
+      <table><thead><tr><th>ID</th><th>Name</th><th>Course</th><th>Segment</th><th>Status</th></tr></thead>
+      <tbody id="rows" data-testid="campaign-rows"></tbody></table>
+      <div class="note">Drafts are visible to Ops for review. There is no publish button here on purpose.</div>
+    </div>
+  </div>
+</main>
+<script src="/drone-static/_shell.js"></script>
+<script>
+shell();
+let COURSES = {}, SEGMENTS = {};
+const opts = o => Object.entries(o).map(([v, l]) => `<option value="${v}">${l}</option>`).join('');
+async function load() {
+  const d = await getJSON('/drone/api/campaigns');
+  COURSES = d.courses; SEGMENTS = d.segments;
+  const course = document.getElementById('course'), segment = document.getElementById('segment');
+  if (!course.options.length) { course.innerHTML = opts(COURSES); segment.innerHTML = opts(SEGMENTS); }
+  document.getElementById('rows').innerHTML = d.campaigns.map(c => `<tr>
+    <td>${c.id}</td><td>${c.name}</td><td>${COURSES[c.course] || c.course}</td>
+    <td>${SEGMENTS[c.segment] || c.segment}</td>
+    <td><span class="pill warn">${c.status}</span></td></tr>`).join('');
+}
+document.querySelector('[data-testid=save-campaign]').onclick = async () => {
+  const r = await postJSON('/drone/api/campaigns', {
+    name: document.getElementById('name').value,
+    course: document.getElementById('course').value,
+    segment: document.getElementById('segment').value,
+    channels: [...document.querySelectorAll('.check input:checked')].map(i => i.value),
+    send_on: document.getElementById('send').value,
+    headline: document.getElementById('headline').value
+  });
+  document.getElementById('result').innerHTML =
+    `<span class="pill ok">SAVED</span> ${r.saved.id} — estimated reach ${r.reach_estimate.toLocaleString()} pilots.`;
+  load();
+};
+load();
+</script>
+</body></html>

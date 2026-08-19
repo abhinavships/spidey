@@ -253,6 +253,21 @@ class WorkflowSpec(BaseModel):
     rehearsal_passed: bool = False
     source_utterance: str = ""
 
+    @model_validator(mode="after")
+    def _steps_are_a_sequence(self) -> "WorkflowSpec":
+        """Every step's index must equal its position.
+
+        The runtime advances only while ``cursor == step.index``, so a gap in the
+        numbering makes it re-run one step forever. Catching it here turns a
+        silent hang into a loud, immediate failure.
+        """
+        for position, step in enumerate(self.steps):
+            if step.index != position:
+                raise ValueError(
+                    f"step {step.id!r} is at position {position} but claims index "
+                    f"{step.index}; a workflow's steps must be numbered in order")
+        return self
+
     def step_by_id(self, step_id: str) -> Step | None:
         """Look up a step by its slug.
 

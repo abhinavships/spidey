@@ -1,0 +1,111 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Mission planner — SkyLoop</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><text y='14' font-size='14'>🚁</text></svg>">
+<link rel="stylesheet" href="/drone-static/skyloop.css">
+</head><body>
+<header class="topbar"></header>
+<main>
+  <h1>Mission planner</h1>
+  <p class="sub">Build a flight plan, clear preflight, and save it as a draft for the duty pilot.</p>
+
+  <div class="grid cols-2">
+    <div class="card">
+      <h2>Flight parameters</h2>
+      <div class="field"><label for="name">Mission name</label>
+        <input id="name" data-testid="mission-name" placeholder="e.g. Solar farm inspection"></div>
+      <div class="field"><label for="aircraft">Airframe</label>
+        <select id="aircraft" data-testid="aircraft">
+          <option>SkyLoop X4</option><option>SkyLoop Heavy 2</option><option>SkyLoop Micro</option>
+        </select></div>
+      <div class="row">
+        <div class="field"><label for="altitude">Cruise altitude (m, max 120)</label>
+          <input id="altitude" data-testid="altitude" type="number" value="0"></div>
+        <div class="field"><label for="speed">Ground speed (m/s, max 12)</label>
+          <input id="speed" data-testid="speed" type="number" value="0"></div>
+      </div>
+      <div class="row">
+        <div class="field"><label for="overlap">Image overlap (%)</label>
+          <input id="overlap" data-testid="overlap" type="number" value="70"></div>
+        <div class="field"><label for="geofence">Geofence radius (m)</label>
+          <input id="geofence" data-testid="geofence" type="number" value="500"></div>
+      </div>
+      <div class="row">
+        <div class="field"><label for="rth">Return-to-home altitude (m, min 40)</label>
+          <input id="rth" data-testid="rth-altitude" type="number" value="0"></div>
+        <div class="field"><label for="battery">Battery floor (%, min 25)</label>
+          <input id="battery" data-testid="battery-floor" type="number" value="0"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Preflight checklist</h2>
+      <label class="check"><input type="checkbox" data-testid="check-battery" value="battery"> Batteries charged and seated</label>
+      <label class="check"><input type="checkbox" data-testid="check-props" value="props"> Propellers inspected for damage</label>
+      <label class="check"><input type="checkbox" data-testid="check-compass" value="compass"> Compass and IMU calibrated</label>
+      <label class="check"><input type="checkbox" data-testid="check-airspace" value="airspace"> Airspace clearance confirmed</label>
+      <label class="check"><input type="checkbox" data-testid="check-weather" value="weather"> Wind and weather inside limits</label>
+      <div style="margin-top:18px">
+        <button data-testid="run-preflight" class="ghost">Run preflight check</button>
+        <button data-testid="save-mission">Save mission draft</button>
+      </div>
+      <div id="verdict" data-testid="preflight-verdict" class="note"></div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:16px">
+    <h2>Saved missions</h2>
+    <table><thead><tr><th>ID</th><th>Name</th><th>Airframe</th><th>Altitude</th><th>Status</th></tr></thead>
+    <tbody id="rows" data-testid="mission-rows"></tbody></table>
+  </div>
+</main>
+<script src="/drone-static/_shell.js"></script>
+<script>
+shell();
+const val = id => document.getElementById(id).value;
+const num = id => Number(val(id) || 0);
+const checklist = () => [...document.querySelectorAll('.check input:checked')].map(i => i.value);
+const body = () => ({
+  name: val('name'), aircraft: val('aircraft'), altitude_m: num('altitude'), speed_ms: num('speed'),
+  overlap_pct: num('overlap'), geofence_m: num('geofence'), rth_altitude_m: num('rth'),
+  battery_floor_pct: num('battery'), checklist: checklist()
+});
+const LABELS = {
+  checklist_complete: 'checklist complete', altitude_within_limit: 'altitude within 120 m',
+  speed_within_limit: 'speed within 12 m/s', rth_above_obstacles: 'return-to-home above 40 m',
+  battery_reserve_set: 'battery reserve at least 25%'
+};
+function verdict(r) {
+  const failed = Object.entries(r.checks).filter(([, ok]) => !ok).map(([k]) => LABELS[k]);
+  document.getElementById('verdict').innerHTML = r.cleared
+    ? `<span class="pill ok">CLEARED</span> all ${r.total} preflight checks passed.`
+    : `<span class="pill warn">NOT CLEARED</span> ${r.passed}/${r.total} passed — still open: ${failed.join(', ')}.`;
+}
+document.querySelector('[data-testid=run-preflight]').onclick = async () => {
+  // The same rule the server applies, mirrored so the check is instant.
+  const m = body();
+  verdict({checks: {
+    checklist_complete: m.checklist.length >= 4,
+    altitude_within_limit: m.altitude_m > 0 && m.altitude_m <= 120,
+    speed_within_limit: m.speed_ms > 0 && m.speed_ms <= 12,
+    rth_above_obstacles: m.rth_altitude_m >= 40,
+    battery_reserve_set: m.battery_floor_pct >= 25
+  }, get passed() { return Object.values(this.checks).filter(Boolean).length; },
+     total: 5, get cleared() { return this.passed === 5; }});
+};
+document.querySelector('[data-testid=save-mission]').onclick = async () => {
+  const r = await postJSON('/drone/api/missions', body());
+  verdict(r.readiness);
+  document.getElementById('verdict').insertAdjacentHTML('beforeend',
+    ` <span data-testid="saved-id">Saved as ${r.saved.id}.</span>`);
+  load();
+};
+async function load() {
+  const {missions} = await getJSON('/drone/api/missions');
+  document.getElementById('rows').innerHTML = missions.map(m => `<tr>
+    <td>${m.id}</td><td>${m.name}</td><td>${m.aircraft}</td><td>${m.altitude_m} m</td>
+    <td><span class="pill ${m.status === 'flown' ? 'info' : 'warn'}">${m.status}</span></td></tr>`).join('');
+}
+load();
+</script>
+</body></html>

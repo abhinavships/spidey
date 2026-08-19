@@ -1,0 +1,421 @@
+{
+  "id": "tech-mission-plan",
+  "version": 1,
+  "title": "Plan and preflight a survey mission",
+  "description": "Sign in as the flight engineer, build a survey flight plan, clear preflight, and save the draft.",
+  "target_domain": "localhost",
+  "entry_url": "http://localhost:8000/drone/login",
+  "steps": [
+    {
+      "id": "open-login",
+      "index": 0,
+      "action": "navigate",
+      "intent": "open the SkyLoop sign-in page",
+      "locator": null,
+      "value": "http://localhost:8000/drone/login",
+      "narration_hint": "opening SkyLoop",
+      "risk": "safe",
+      "knowledge": null,
+      "timeout_ms": 8000
+    },
+    {
+      "id": "type-email",
+      "index": 1,
+      "action": "type",
+      "intent": "type the flight engineer email address",
+      "locator": {
+        "intent": "the work email field",
+        "candidates": [
+          {
+            "strategy": "test_id",
+            "value": "email",
+            "name": null,
+            "exact": false
+          }
+        ],
+        "healed_at": null,
+        "heal_count": 0
+      },
+      "value": "tech@skyloop.io",
+      "narration_hint": "signing in as the flight engineer",
+      "risk": "caution",
+      "knowledge": null,
+      "timeout_ms": 8000
+    },
+    {
+      "id": "type-password",
+      "index": 2,
+      "action": "type",
+      "intent": "type the account password",
+      "locator": {
+        "intent": "the password field",
+        "candidates": [
+          {
+            "strategy": "test_id",
+            "value": "password",
+            "name": null,
+            "exact": false
+          }
+        ],
+        "healed_at": null,
+        "heal_count": 0
+      },
+      "value": "flightdemo",
+      "narration_hint": "entering the password",
+      "risk": "caution",
+      "knowledge": null,
+      "timeout_ms": 8000
+    },
+    {
+      "id": "click-signin",
+      "index": 3,
+      "action": "click",
+      "intent": "click Sign in",
+      "locator": {
+        "intent": "the Sign in button",
+        "candidates": [
+          {
+            "strategy": "test_id",
+            "value": "sign-in",
+            "name": null,
+            "exact": false
+          },
+          {
+            "strategy": "role",
+            "value": "button",
+            "name": "Sign in",
+            "exact": false
+          },
+          {
+            "strategy": "text",
+            "value": "Sign in",
+            "name": null,
+            "exact": false
+          }
+        ],
+        "healed_at": null,
+        "heal_count": 0
+      },
+      "value": null,
+      "narration_hint": "signing in",
+      "risk": "caution",
+      "knowledge": null,
+      "timeout_ms": 8000
+    },
+    {
+      "id": "name-mission",
+      "index": 4,
+      "action": "type",
+      "intent": "type the mission name",
+      "locator": {
+        "intent": "the mission name field",
+        "candidates": [
+          {
+            "strategy": "test_id",
+            "value": "mission-name",
+            "name": null,
+            "exact": false
+          }
+        ],
+        "healed_at": null,
+        "heal_count": 0
+      },
+      "value": "Solar farm inspection \u2014 east block",
+      "narration_hint": "naming the mission",
+      "risk": "caution",
+      "knowledge": null,
+      "timeout_ms": 8000
+    },
+    {
+      "id": "set-altitude",
+      "index": 5,
+      "action": "type",
+      "intent": "set the cruise altitude to 90 metres",
+      "locator": {
+        "intent": "the cruise altitude field",
+        "candidates": [
+          {
+            "strategy": "test_id",
+            "value": "altitude",
+            "name": null,
+            "exact": false
+          }
+        ],
+        "healed_at": null,
+        "heal_count": 0
+      },
+      "value": "90",
+      "narration_hint": "setting cruise altitude",
+      "risk": "caution",
+      "knowledge": null,
+      "timeout_ms": 8000
+    },
+    {
+      "id": "set-speed",
+      "index": 6,
+      "action": "type",
+      "intent": "set the ground speed to 6 metres per second",
+      "locator": {
+        "intent": "the ground speed field",
+        "candidates": [
+          {
+            "strategy": "test_id",
+            "value": "speed",
+            "name": null,
+            "exact": false
+          }
+        ],
+        "healed_at": null,
+        "heal_count": 0
+      },
+      "value": "6",
+      "narration_hint": "setting ground speed",
+      "risk": "caution",
+      "knowledge": null,
+      "timeout_ms": 8000
+    },
+    {
+      "id": "set-rth",
+      "index": 7,
+      "action": "type",
+      "intent": "set the return-to-home altitude to 55 metres",
+      "locator": {
+        "intent": "the return-to-home altitude field",
+        "candidates": [
+          {
+            "strategy": "test_id",
+            "value": "rth-altitude",
+            "name": null,
+            "exact": false
+          }
+        ],
+        "healed_at": null,
+        "heal_count": 0
+      },
+      "value": "55",
+      "narration_hint": "setting return-to-home altitude",
+      "risk": "caution",
+      "knowledge": null,
+      "timeout_ms": 8000
+    },
+    {
+      "id": "set-battery",
+      "index": 8,
+      "action": "type",
+      "intent": "set the battery floor to 30 percent",
+      "locator": {
+        "intent": "the battery floor field",
+        "candidates": [
+          {
+            "strategy": "test_id",
+            "value": "battery-floor",
+            "name": null,
+            "exact": false
+          }
+        ],
+        "healed_at": null,
+        "heal_count": 0
+      },
+      "value": "30",
+      "narration_hint": "setting the battery reserve",
+      "risk": "caution",
+      "knowledge": null,
+      "timeout_ms": 8000
+    },
+    {
+      "id": "check-battery",
+      "index": 9,
+      "action": "click",
+      "intent": "tick batteries charged and seated",
+      "locator": {
+        "intent": "the batteries charged checkbox",
+        "candidates": [
+          {
+            "strategy": "test_id",
+            "value": "check-battery",
+            "name": null,
+            "exact": false
+          }
+        ],
+        "healed_at": null,
+        "heal_count": 0
+      },
+      "value": null,
+      "narration_hint": "ticking the battery check",
+      "risk": "safe",
+      "knowledge": null,
+      "timeout_ms": 8000
+    },
+    {
+      "id": "check-props",
+      "index": 10,
+      "action": "click",
+      "intent": "tick propellers inspected",
+      "locator": {
+        "intent": "the propellers inspected checkbox",
+        "candidates": [
+          {
+            "strategy": "test_id",
+            "value": "check-props",
+            "name": null,
+            "exact": false
+          }
+        ],
+        "healed_at": null,
+        "heal_count": 0
+      },
+      "value": null,
+      "narration_hint": "ticking the propeller check",
+      "risk": "safe",
+      "knowledge": null,
+      "timeout_ms": 8000
+    },
+    {
+      "id": "check-compass",
+      "index": 11,
+      "action": "click",
+      "intent": "tick compass and IMU calibrated",
+      "locator": {
+        "intent": "the compass calibrated checkbox",
+        "candidates": [
+          {
+            "strategy": "test_id",
+            "value": "check-compass",
+            "name": null,
+            "exact": false
+          }
+        ],
+        "healed_at": null,
+        "heal_count": 0
+      },
+      "value": null,
+      "narration_hint": "ticking the compass check",
+      "risk": "safe",
+      "knowledge": null,
+      "timeout_ms": 8000
+    },
+    {
+      "id": "check-airspace",
+      "index": 12,
+      "action": "click",
+      "intent": "tick airspace clearance confirmed",
+      "locator": {
+        "intent": "the airspace clearance checkbox",
+        "candidates": [
+          {
+            "strategy": "test_id",
+            "value": "check-airspace",
+            "name": null,
+            "exact": false
+          }
+        ],
+        "healed_at": null,
+        "heal_count": 0
+      },
+      "value": null,
+      "narration_hint": "ticking airspace clearance",
+      "risk": "safe",
+      "knowledge": null,
+      "timeout_ms": 8000
+    },
+    {
+      "id": "run-preflight",
+      "index": 13,
+      "action": "click",
+      "intent": "run the preflight check",
+      "locator": {
+        "intent": "the Run preflight check button",
+        "candidates": [
+          {
+            "strategy": "test_id",
+            "value": "run-preflight",
+            "name": null,
+            "exact": false
+          },
+          {
+            "strategy": "role",
+            "value": "button",
+            "name": "Run preflight check",
+            "exact": false
+          },
+          {
+            "strategy": "text",
+            "value": "Run preflight check",
+            "name": null,
+            "exact": false
+          }
+        ],
+        "healed_at": null,
+        "heal_count": 0
+      },
+      "value": null,
+      "narration_hint": "running preflight",
+      "risk": "safe",
+      "knowledge": null,
+      "timeout_ms": 8000
+    },
+    {
+      "id": "read-verdict",
+      "index": 14,
+      "action": "assert",
+      "intent": "confirm the preflight verdict is shown",
+      "locator": {
+        "intent": "the preflight verdict line",
+        "candidates": [
+          {
+            "strategy": "test_id",
+            "value": "preflight-verdict",
+            "name": null,
+            "exact": false
+          }
+        ],
+        "healed_at": null,
+        "heal_count": 0
+      },
+      "value": null,
+      "narration_hint": "reading the verdict",
+      "risk": "safe",
+      "knowledge": null,
+      "timeout_ms": 8000
+    },
+    {
+      "id": "save-mission",
+      "index": 15,
+      "action": "click",
+      "intent": "save the mission draft",
+      "locator": {
+        "intent": "the Save mission draft button",
+        "candidates": [
+          {
+            "strategy": "test_id",
+            "value": "save-mission",
+            "name": null,
+            "exact": false
+          },
+          {
+            "strategy": "role",
+            "value": "button",
+            "name": "Save mission draft",
+            "exact": false
+          },
+          {
+            "strategy": "text",
+            "value": "Save mission draft",
+            "name": null,
+            "exact": false
+          }
+        ],
+        "healed_at": null,
+        "heal_count": 0
+      },
+      "value": null,
+      "narration_hint": "saving the draft",
+      "risk": "caution",
+      "knowledge": null,
+      "timeout_ms": 8000
+    }
+  ],
+  "taught_at": "2026-08-19T12:55:10.769631+00:00",
+  "rehearsal_passed": true,
+  "source_utterance": "Sign in as the flight engineer, build a survey flight plan, clear preflight, and save the draft."
+}
